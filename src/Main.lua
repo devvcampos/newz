@@ -4,8 +4,7 @@ local BASE_URL =
 
 local CacheBust =
     tostring(
-        DateTime.now().
-            UnixTimestampMillis
+        DateTime.now().UnixTimestampMillis
     )
 
 
@@ -13,9 +12,7 @@ local CacheBust =
 -- MODULE LOADER
 ---------------------------------------------------------
 
-local function LoadModule(
-    Path
-)
+local function LoadModule(Path)
 
     local URL =
         BASE_URL
@@ -25,16 +22,11 @@ local function LoadModule(
 
 
     local Source =
-        game:HttpGet(
-            URL
-        )
+        game:HttpGet(URL)
 
 
-    local Chunk,
-        Error =
-            loadstring(
-                Source
-            )
+    local Chunk, Error =
+        loadstring(Source)
 
 
     assert(
@@ -46,11 +38,8 @@ local function LoadModule(
     )
 
 
-    local Success,
-        Result =
-            pcall(
-                Chunk
-            )
+    local Success, Result =
+        pcall(Chunk)
 
 
     assert(
@@ -63,32 +52,25 @@ local function LoadModule(
 
 
     return Result
-
 end
 
 
 ---------------------------------------------------------
--- GLOBAL ENV
+-- ENVIRONMENT
 ---------------------------------------------------------
 
 local Environment =
-    (
-        getgenv
-        and getgenv()
-    )
+    (getgenv and getgenv())
     or _G
 
 
 ---------------------------------------------------------
--- REMOVE INSTÂNCIA ANTERIOR
+-- REMOVE INSTANCIA ANTERIOR
 ---------------------------------------------------------
 
 if
     Environment.NEWZ
-    and type(
-        Environment.NEWZ.Destroy
-    )
-        == "function"
+    and type(Environment.NEWZ.Destroy) == "function"
 then
 
     pcall(
@@ -99,7 +81,7 @@ end
 
 
 ---------------------------------------------------------
--- LOAD
+-- LOAD MODULES
 ---------------------------------------------------------
 
 local Config =
@@ -121,29 +103,47 @@ local UIModule =
 
 
 ---------------------------------------------------------
+-- VALIDATION
+---------------------------------------------------------
+
+assert(
+    type(Config) == "table",
+    "Config.lua nao retornou uma tabela"
+)
+
+
+assert(
+    type(ESPModule) == "table"
+    and type(ESPModule.Init) == "function",
+    "ESP.lua invalido"
+)
+
+
+assert(
+    type(UIModule) == "table"
+    and type(UIModule.Init) == "function",
+    "Ui.lua invalido"
+)
+
+
+---------------------------------------------------------
 -- INIT
 ---------------------------------------------------------
 
-local ESP =
-    ESPModule:
-        Init(
-            Config
-        )
+local ESP = nil
 
 
 local UI =
-    UIModule:
-        Init(
-            Config
-        )
+    UIModule.Init(
+        Config
+    )
 
 
 ---------------------------------------------------------
--- PROJECT API
+-- PROJECT
 ---------------------------------------------------------
 
-local Project =
-    {}
+local Project = {}
 
 
 Project.Config =
@@ -158,9 +158,15 @@ Project.UI =
     UI
 
 
+---------------------------------------------------------
+-- DESTROY
+---------------------------------------------------------
+
 function Project.Destroy()
 
-    if UI then
+    if UI
+        and type(UI.Destroy) == "function"
+    then
 
         pcall(
             UI.Destroy
@@ -169,7 +175,9 @@ function Project.Destroy()
     end
 
 
-    if ESP then
+    if ESP
+        and type(ESP.Destroy) == "function"
+    then
 
         pcall(
             ESP.Destroy
@@ -185,11 +193,14 @@ function Project.Destroy()
 
         Environment.NEWZ =
             nil
-
     end
 
 end
 
+
+---------------------------------------------------------
+-- GLOBAL PROJECT
+---------------------------------------------------------
 
 Environment.NEWZ =
     Project
