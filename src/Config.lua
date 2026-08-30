@@ -10,6 +10,23 @@ Config.UI = {
 
     ConfigDirectory = "newz",
     ConfigFolder = "Configs",
+
+    HighlightColor =
+        Color3.fromRGB(
+            17,
+            238,
+            253
+        ),
+
+    AlwaysShowTab = false,
+
+    PerformanceMode = false,
+
+    Watermark = true,
+
+    Rainbow = false,
+
+    RainbowSpeed = 0.10,
 }
 
 Config.ESP = {

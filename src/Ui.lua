@@ -14,11 +14,52 @@ function UI.Init(Config)
         )()
 
 
+    ---------------------------------------------------------
+    -- STATE
+    ---------------------------------------------------------
+
+    local Destroyed =
+        false
+
+
+    local Threads =
+        {}
+
+
+    ---------------------------------------------------------
+    -- LOADER
+    ---------------------------------------------------------
+
     Compkiller:
         Loader(
             nil,
             1
         ).yield()
+
+
+    ---------------------------------------------------------
+    -- INITIAL COLORS
+    ---------------------------------------------------------
+
+    if Config.UI.HighlightColor then
+
+        Compkiller:
+            ChangeHighlightColor(
+                Config.UI.HighlightColor
+            )
+
+    end
+
+
+    ---------------------------------------------------------
+    -- PERFORMANCE
+    ---------------------------------------------------------
+
+    Compkiller:
+        OptimizeMode(
+            Config.UI.PerformanceMode
+            == true
+        )
 
 
     ---------------------------------------------------------
@@ -38,6 +79,13 @@ function UI.Init(Config)
             })
 
 
+    -- Ativa notificações nativas
+    -- ao carregar/salvar configs.
+
+    FileWatcher.EnableNotify =
+        true
+
+
     ---------------------------------------------------------
     -- WINDOW
     ---------------------------------------------------------
@@ -45,10 +93,23 @@ function UI.Init(Config)
     local Window =
         Compkiller.new({
 
+            Name =
+                Config.Project.Name,
+
             Keybind =
                 Config.UI.Keybind,
 
         })
+
+
+    Window.PerformanceMode =
+        Config.UI.PerformanceMode
+        == true
+
+
+    Window.AlwayShowTab =
+        Config.UI.AlwaysShowTab
+        == true
 
 
     Window:
@@ -69,7 +130,163 @@ function UI.Init(Config)
 
 
     ---------------------------------------------------------
-    -- CATEGORY
+    -- WATERMARK
+    ---------------------------------------------------------
+
+    local Watermark =
+        Window:
+            Watermark()
+
+
+    local WatermarkProject =
+        Watermark:
+            AddText({
+
+                Icon =
+                    "eye",
+
+                Text =
+                    Config.Project.Name,
+
+            })
+
+
+    local WatermarkUser =
+        Watermark:
+            AddText({
+
+                Icon =
+                    "user",
+
+                Text =
+                    game:GetService(
+                        "Players"
+                    ).LocalPlayer.Name,
+
+            })
+
+
+    local WatermarkTime =
+        Watermark:
+            AddText({
+
+                Icon =
+                    "clock",
+
+                Text =
+                    Compkiller:GetTimeNow(),
+
+            })
+
+
+    local WatermarkPlayers =
+        Watermark:
+            AddText({
+
+                Icon =
+                    "users",
+
+                Text =
+                    "Players: 0",
+
+            })
+
+
+    local WatermarkItems = {
+
+        WatermarkProject,
+        WatermarkUser,
+        WatermarkTime,
+        WatermarkPlayers,
+
+    }
+
+
+    local function SetWatermarkVisible(
+        Value
+    )
+
+        Config.UI.Watermark =
+            Value == true
+
+
+        for _, Item
+            in ipairs(
+                WatermarkItems
+            )
+        do
+
+            if Item
+                and Item.Visible
+            then
+
+                Item:
+                    Visible(
+                        Config.UI.Watermark
+                    )
+
+            end
+
+        end
+
+    end
+
+
+    SetWatermarkVisible(
+        Config.UI.Watermark
+    )
+
+
+    ---------------------------------------------------------
+    -- WATERMARK UPDATE
+    ---------------------------------------------------------
+
+    Threads.Watermark =
+        task.spawn(function()
+
+            local Players =
+                game:GetService(
+                    "Players"
+                )
+
+
+            while
+                not Destroyed
+            do
+
+                task.wait(
+                    1
+                )
+
+
+                if Destroyed then
+                    break
+                end
+
+
+                WatermarkTime:
+                    SetText(
+                        Compkiller:
+                            GetTimeNow()
+                    )
+
+
+                WatermarkPlayers:
+                    SetText(
+                        "Players: "
+                        .. tostring(
+                            #Players:
+                                GetPlayers()
+                        )
+                    )
+
+            end
+
+        end)
+
+
+    ---------------------------------------------------------
+    -- VISUAL CATEGORY
     ---------------------------------------------------------
 
     Window:
@@ -77,6 +294,10 @@ function UI.Init(Config)
             Name = "Visual"
         })
 
+
+    ---------------------------------------------------------
+    -- PLAYERS TAB
+    ---------------------------------------------------------
 
     local Visuals =
         Window:
@@ -95,7 +316,7 @@ function UI.Init(Config)
 
 
     ---------------------------------------------------------
-    -- SECTIONS
+    -- ESP SECTION
     ---------------------------------------------------------
 
     local ESPSection =
@@ -111,6 +332,10 @@ function UI.Init(Config)
             })
 
 
+    ---------------------------------------------------------
+    -- APPEARANCE SECTION
+    ---------------------------------------------------------
+
     local Appearance =
         Visuals:
             DrawSection({
@@ -125,7 +350,7 @@ function UI.Init(Config)
 
 
     ---------------------------------------------------------
-    -- MAIN ESP
+    -- ESP ENABLED
     ---------------------------------------------------------
 
     ESPSection:
@@ -151,6 +376,10 @@ function UI.Init(Config)
         })
 
 
+    ---------------------------------------------------------
+    -- BOX
+    ---------------------------------------------------------
+
     ESPSection:
         AddToggle({
 
@@ -173,6 +402,10 @@ function UI.Init(Config)
 
         })
 
+
+    ---------------------------------------------------------
+    -- NAME
+    ---------------------------------------------------------
 
     ESPSection:
         AddToggle({
@@ -197,6 +430,10 @@ function UI.Init(Config)
         })
 
 
+    ---------------------------------------------------------
+    -- HEALTH
+    ---------------------------------------------------------
+
     ESPSection:
         AddToggle({
 
@@ -219,6 +456,10 @@ function UI.Init(Config)
 
         })
 
+
+    ---------------------------------------------------------
+    -- DISTANCE
+    ---------------------------------------------------------
 
     ESPSection:
         AddToggle({
@@ -244,7 +485,24 @@ function UI.Init(Config)
 
 
     ---------------------------------------------------------
-    -- APPEARANCE
+    -- INFORMATION
+    ---------------------------------------------------------
+
+    ESPSection:
+        AddParagraph({
+
+            Title =
+                "Entity ESP",
+
+            Content =
+                "Tracking Workspace.Players\n"
+                .. "Cached body-part bounds",
+
+        })
+
+
+    ---------------------------------------------------------
+    -- BOX COLOR
     ---------------------------------------------------------
 
     Appearance:
@@ -270,6 +528,10 @@ function UI.Init(Config)
         })
 
 
+    ---------------------------------------------------------
+    -- TEXT COLOR
+    ---------------------------------------------------------
+
     Appearance:
         AddColorPicker({
 
@@ -292,6 +554,10 @@ function UI.Init(Config)
 
         })
 
+
+    ---------------------------------------------------------
+    -- THICKNESS
+    ---------------------------------------------------------
 
     Appearance:
         AddSlider({
@@ -325,6 +591,10 @@ function UI.Init(Config)
         })
 
 
+    ---------------------------------------------------------
+    -- PADDING
+    ---------------------------------------------------------
+
     Appearance:
         AddSlider({
 
@@ -356,6 +626,10 @@ function UI.Init(Config)
 
         })
 
+
+    ---------------------------------------------------------
+    -- MAX DISTANCE
+    ---------------------------------------------------------
 
     Appearance:
         AddSlider({
@@ -390,7 +664,7 @@ function UI.Init(Config)
 
 
     ---------------------------------------------------------
-    -- CONFIG CATEGORY
+    -- SETTINGS CATEGORY
     ---------------------------------------------------------
 
     Window:
@@ -398,6 +672,287 @@ function UI.Init(Config)
             Name = "Settings"
         })
 
+
+    ---------------------------------------------------------
+    -- GENERAL SETTINGS TAB
+    ---------------------------------------------------------
+
+    local SettingsTab =
+        Window:
+            DrawTab({
+
+                Icon =
+                    "settings-3",
+
+                Name =
+                    "Settings",
+
+                Type =
+                    "Single",
+
+            })
+
+
+    local General =
+        SettingsTab:
+            DrawSection({
+
+                Name =
+                    "Interface",
+
+            })
+
+
+    ---------------------------------------------------------
+    -- HIGHLIGHT
+    ---------------------------------------------------------
+
+    local HighlightOptions =
+        General:
+            AddColorPicker({
+
+                Name =
+                    "Highlight",
+
+                Flag =
+                    "ui_highlight",
+
+                Default =
+                    Config.UI.HighlightColor,
+
+                Callback =
+                    function(Value)
+
+                        Config.UI.HighlightColor =
+                            Value
+
+
+                        Compkiller:
+                            ChangeHighlightColor(
+                                Value
+                            )
+
+                    end,
+
+            }).Link:
+            AddOption()
+
+
+    ---------------------------------------------------------
+    -- RAINBOW
+    ---------------------------------------------------------
+
+    HighlightOptions:
+        AddToggle({
+
+            Name =
+                "Rainbow",
+
+            Flag =
+                "ui_rainbow",
+
+            Default =
+                Config.UI.Rainbow,
+
+            Callback =
+                function(Value)
+
+                    Config.UI.Rainbow =
+                        Value
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- RAINBOW SPEED
+    ---------------------------------------------------------
+
+    HighlightOptions:
+        AddSlider({
+
+            Name =
+                "Speed",
+
+            Flag =
+                "ui_rainbow_speed",
+
+            Min =
+                0.01,
+
+            Max =
+                1,
+
+            Round =
+                2,
+
+            Default =
+                Config.UI.RainbowSpeed,
+
+            Callback =
+                function(Value)
+
+                    Config.UI.RainbowSpeed =
+                        Value
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- ALWAYS SHOW TAB
+    ---------------------------------------------------------
+
+    General:
+        AddToggle({
+
+            Name =
+                "Always Show Tab",
+
+            Flag =
+                "ui_always_tab",
+
+            Default =
+                Config.UI.AlwaysShowTab,
+
+            Callback =
+                function(Value)
+
+                    Config.UI.AlwaysShowTab =
+                        Value
+
+
+                    Window.AlwayShowTab =
+                        Value
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- PERFORMANCE MODE
+    ---------------------------------------------------------
+
+    General:
+        AddToggle({
+
+            Name =
+                "Performance Mode",
+
+            Flag =
+                "ui_performance",
+
+            Default =
+                Config.UI.PerformanceMode,
+
+            Callback =
+                function(Value)
+
+                    Config.UI.PerformanceMode =
+                        Value
+
+
+                    Window.PerformanceMode =
+                        Value
+
+
+                    Compkiller:
+                        OptimizeMode(
+                            Value
+                        )
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- WATERMARK
+    ---------------------------------------------------------
+
+    General:
+        AddToggle({
+
+            Name =
+                "Watermark",
+
+            Flag =
+                "ui_watermark",
+
+            Default =
+                Config.UI.Watermark,
+
+            Callback =
+                function(Value)
+
+                    SetWatermarkVisible(
+                        Value
+                    )
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- MENU KEY
+    ---------------------------------------------------------
+
+    General:
+        AddKeybind({
+
+            Name =
+                "Menu Key",
+
+            Flag =
+                "ui_menu_key",
+
+            Default =
+                Config.UI.Keybind,
+
+            Callback =
+                function(Value)
+
+                    Config.UI.Keybind =
+                        Value
+
+
+                    Window:
+                        SetMenuKey(
+                            Value
+                        )
+
+                end,
+
+        })
+
+
+    ---------------------------------------------------------
+    -- UI INFO
+    ---------------------------------------------------------
+
+    General:
+        AddParagraph({
+
+            Title =
+                "newz",
+
+            Content =
+                "Version "
+                .. tostring(
+                    Config.Project.Version
+                )
+                .. "\nCompkiller UI",
+
+        })
+
+
+    ---------------------------------------------------------
+    -- CONFIGS
+    ---------------------------------------------------------
 
     local Configs =
         Window:
@@ -415,12 +970,68 @@ function UI.Init(Config)
             })
 
 
-    Configs:
-        Init()
+    local ConfigRuntime =
+        Configs:
+            Init()
 
 
     ---------------------------------------------------------
-    -- API
+    -- RAINBOW THREAD
+    ---------------------------------------------------------
+
+    Threads.Rainbow =
+        task.spawn(function()
+
+            local Hue =
+                0
+
+
+            while
+                not Destroyed
+            do
+
+                task.wait(
+                    Config.UI.RainbowSpeed
+                    or 0.1
+                )
+
+
+                if Destroyed then
+                    break
+                end
+
+
+                if
+                    Config.UI.Rainbow
+                then
+
+                    Compkiller:
+                        ChangeHighlightColor(
+                            Color3.fromHSV(
+                                Hue,
+                                1,
+                                1
+                            )
+                        )
+
+
+                    Hue +=
+                        2 / 255
+
+
+                    if Hue >= 1 then
+                        Hue = 0
+                    end
+
+                end
+
+            end
+
+        end)
+
+
+    ---------------------------------------------------------
+    -- CONTROLLER
     ---------------------------------------------------------
 
     local Controller =
@@ -435,15 +1046,169 @@ function UI.Init(Config)
         Compkiller
 
 
+    ---------------------------------------------------------
+    -- RESOURCE CLEANUP
+    ---------------------------------------------------------
+
+    local function CleanupResource(
+        Resource
+    )
+
+        if not Resource then
+            return
+        end
+
+
+        local ResourceType =
+            typeof(
+                Resource
+            )
+
+
+        if
+            ResourceType
+            == "RBXScriptConnection"
+        then
+
+            pcall(function()
+
+                Resource:
+                    Disconnect()
+
+            end)
+
+
+        elseif
+            ResourceType
+            == "thread"
+        then
+
+            pcall(
+                task.cancel,
+                Resource
+            )
+
+        end
+
+    end
+
+
+    ---------------------------------------------------------
+    -- DESTROY
+    ---------------------------------------------------------
+
     function Controller.Destroy()
+
+        if Destroyed then
+            return
+        end
+
+
+        Destroyed =
+            true
+
+
+        -----------------------------------------------------
+        -- OUR THREADS
+        -----------------------------------------------------
+
+        for _, Thread
+            in pairs(
+                Threads
+            )
+        do
+
+            CleanupResource(
+                Thread
+            )
+
+        end
+
+
+        table.clear(
+            Threads
+        )
+
+
+        -----------------------------------------------------
+        -- CONFIG WATCHER
+        -----------------------------------------------------
+
+        if ConfigRuntime then
+
+            CleanupResource(
+                ConfigRuntime.THREAD
+            )
+
+        end
+
+
+        -----------------------------------------------------
+        -- DISABLE OLD MENU KEY
+        -----------------------------------------------------
+
+        if
+            Window
+            and Window.SetMenuKey
+        then
+
+            pcall(function()
+
+                Window:
+                    SetMenuKey(
+                        Enum.KeyCode.Unknown
+                    )
+
+            end)
+
+        end
+
+
+        -----------------------------------------------------
+        -- COMPKILLER INTERNAL THREADS
+        -----------------------------------------------------
+
+        if Window then
+
+            CleanupResource(
+                Window.LOOP_THREAD
+            )
+
+
+            if Window.THREADS then
+
+                for _, Resource
+                    in pairs(
+                        Window.THREADS
+                    )
+                do
+
+                    CleanupResource(
+                        Resource
+                    )
+
+                end
+
+            end
+
+        end
+
+
+        -----------------------------------------------------
+        -- DESTROY GUI
+        -----------------------------------------------------
 
         if
             Window
             and Window.Root
         then
 
-            Window.Root:
-                Destroy()
+            pcall(function()
+
+                Window.Root:
+                    Destroy()
+
+            end)
 
         end
 
