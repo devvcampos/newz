@@ -2,6 +2,10 @@ local ESP = {}
 
 function ESP.Init(Config)
 
+    ---------------------------------------------------------
+    -- SERVICES
+    ---------------------------------------------------------
+
     local Players =
         game:GetService("Players")
 
@@ -20,11 +24,25 @@ function ESP.Init(Config)
         Config.ESP
 
 
+    ---------------------------------------------------------
+    -- GAME ENTITIES
+    ---------------------------------------------------------
+
+    local EntitiesFolder =
+        Workspace:WaitForChild(
+            "Players"
+        )
+
+
+    ---------------------------------------------------------
+    -- STATE
+    ---------------------------------------------------------
+
     local Destroyed =
         false
 
 
-    local ESPObjects =
+    local Entities =
         {}
 
 
@@ -33,7 +51,88 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- GUI
+    -- PERFORMANCE
+    ---------------------------------------------------------
+
+    -- O ESP visual é atualizado a 30 Hz.
+    -- Isso já é suficientemente suave e corta bastante
+    -- o custo das projeções 3D -> 2D.
+
+    local UPDATE_RATE =
+        1 / 30
+
+
+    local UpdateAccumulator =
+        0
+
+
+    ---------------------------------------------------------
+    -- BODY PART NAMES
+    ---------------------------------------------------------
+
+    local BodyPartNames = {
+
+        -----------------------------------------------------
+        -- CUSTOM PT-BR
+        -----------------------------------------------------
+
+        ["Cabeça"] = true,
+        ["Cabeca"] = true,
+
+        ["Tronco"] = true,
+
+        ["Braço esquerdo"] = true,
+        ["Braco esquerdo"] = true,
+
+        ["Braço direito"] = true,
+        ["Braco direito"] = true,
+
+        ["Perna esquerda"] = true,
+        ["Perna direita"] = true,
+
+
+        -----------------------------------------------------
+        -- R6
+        -----------------------------------------------------
+
+        ["Head"] = true,
+        ["Torso"] = true,
+
+        ["Left Arm"] = true,
+        ["Right Arm"] = true,
+
+        ["Left Leg"] = true,
+        ["Right Leg"] = true,
+
+
+        -----------------------------------------------------
+        -- R15
+        -----------------------------------------------------
+
+        ["UpperTorso"] = true,
+        ["LowerTorso"] = true,
+
+        ["LeftUpperArm"] = true,
+        ["LeftLowerArm"] = true,
+        ["LeftHand"] = true,
+
+        ["RightUpperArm"] = true,
+        ["RightLowerArm"] = true,
+        ["RightHand"] = true,
+
+        ["LeftUpperLeg"] = true,
+        ["LeftLowerLeg"] = true,
+        ["LeftFoot"] = true,
+
+        ["RightUpperLeg"] = true,
+        ["RightLowerLeg"] = true,
+        ["RightFoot"] = true,
+
+    }
+
+
+    ---------------------------------------------------------
+    -- ESP GUI
     ---------------------------------------------------------
 
     local PlayerGui =
@@ -64,24 +163,29 @@ function ESP.Init(Config)
     ScreenGui.Name =
         "newz_ESP"
 
+
     ScreenGui.ResetOnSpawn =
         false
+
 
     ScreenGui.IgnoreGuiInset =
         true
 
+
     ScreenGui.DisplayOrder =
         999
 
+
     ScreenGui.ZIndexBehavior =
         Enum.ZIndexBehavior.Sibling
+
 
     ScreenGui.Parent =
         PlayerGui
 
 
     ---------------------------------------------------------
-    -- TEXT
+    -- CREATE TEXT
     ---------------------------------------------------------
 
     local function CreateText()
@@ -110,12 +214,16 @@ function ESP.Init(Config)
             )
 
 
+        Text.Font =
+            Enum.Font.Gotham
+
+
+        Text.TextSize =
+            13
+
+
         Text.TextColor3 =
             Settings.TextColor
-
-
-        Text.TextStrokeTransparency =
-            0.25
 
 
         Text.TextStrokeColor3 =
@@ -126,16 +234,16 @@ function ESP.Init(Config)
             )
 
 
-        Text.Font =
-            Enum.Font.Gotham
-
-
-        Text.TextSize =
-            13
+        Text.TextStrokeTransparency =
+            0.25
 
 
         Text.ZIndex =
             11
+
+
+        Text.Visible =
+            false
 
 
         Text.Parent =
@@ -148,10 +256,12 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- CREATE ESP
+    -- CREATE VISUALS
     ---------------------------------------------------------
 
-    local function CreateESP(Player)
+    local function CreateVisuals(
+        Character
+    )
 
         local Box =
             Instance.new(
@@ -161,7 +271,7 @@ function ESP.Init(Config)
 
         Box.Name =
             "ESP_"
-            .. Player.Name
+            .. Character.Name
 
 
         Box.BackgroundTransparency =
@@ -170,6 +280,10 @@ function ESP.Init(Config)
 
         Box.BorderSizePixel =
             0
+
+
+        Box.Visible =
+            false
 
 
         Box.ZIndex =
@@ -186,12 +300,12 @@ function ESP.Init(Config)
             )
 
 
-        Stroke.Thickness =
-            Settings.BoxThickness
-
-
         Stroke.Color =
             Settings.BoxColor
+
+
+        Stroke.Thickness =
+            Settings.BoxThickness
 
 
         Stroke.LineJoinMode =
@@ -202,7 +316,7 @@ function ESP.Init(Config)
             Box
 
 
-        local Data = {
+        return {
 
             Box =
                 Box,
@@ -221,15 +335,6 @@ function ESP.Init(Config)
 
         }
 
-
-        ESPObjects[
-            Player
-        ] =
-            Data
-
-
-        return Data
-
     end
 
 
@@ -237,97 +342,194 @@ function ESP.Init(Config)
     -- HIDE
     ---------------------------------------------------------
 
-    local function HideESP(Data)
+    local function HideEntity(
+        Data
+    )
 
         if not Data then
             return
         end
 
 
-        Data.Box.Visible =
+        local Visuals =
+            Data.Visuals
+
+
+        if not Visuals then
+            return
+        end
+
+
+        Visuals.Box.Visible =
             false
 
-        Data.Name.Visible =
+
+        Visuals.Name.Visible =
             false
 
-        Data.Health.Visible =
+
+        Visuals.Health.Visible =
             false
 
-        Data.Distance.Visible =
+
+        Visuals.Distance.Visible =
             false
 
     end
 
 
     ---------------------------------------------------------
-    -- REMOVE
+    -- PLAYER RESOLUTION
     ---------------------------------------------------------
 
-    local function RemoveESP(Player)
+    local function ResolvePlayer(
+        Character
+    )
 
-        local Data =
-            ESPObjects[
-                Player
-            ]
+        -----------------------------------------------------
+        -- ATRIBUTO USER ID
+        -----------------------------------------------------
+
+        local UserId =
+            Character:
+                GetAttribute(
+                    "UserId"
+                )
 
 
-        if not Data then
-            return
-        end
+        if UserId then
+
+            local Success,
+                Player =
+                    pcall(
+                        Players.GetPlayerByUserId,
+                        Players,
+                        tonumber(UserId)
+                    )
 
 
-        for _, Object
-            in pairs(Data)
-        do
-
-            if
-                typeof(Object)
-                == "Instance"
+            if Success
+                and Player
             then
 
-                Object:Destroy()
+                return Player
 
             end
 
         end
 
 
-        ESPObjects[
-            Player
-        ] =
-            nil
+        -----------------------------------------------------
+        -- NOME DO MODEL
+        -----------------------------------------------------
+
+        local Player =
+            Players:
+                FindFirstChild(
+                    Character.Name
+                )
+
+
+        if Player
+            and Player:IsA("Player")
+        then
+
+            return Player
+
+        end
+
+
+        return nil
 
     end
 
 
     ---------------------------------------------------------
-    -- BODY FILTER
+    -- LOCAL ENTITY?
     ---------------------------------------------------------
 
-    local function IsBodyPart(
-        Part,
+    local function IsLocalEntity(
         Character
     )
 
+        local Player =
+            ResolvePlayer(
+                Character
+            )
+
+
+        if Player
+            == LocalPlayer
+        then
+
+            return true
+
+        end
+
+
         if
-            not Part:
+            Character.Name
+            == LocalPlayer.Name
+        then
+
+            return true
+
+        end
+
+
+        if
+            Character.Name
+            == LocalPlayer.DisplayName
+        then
+
+            return true
+
+        end
+
+
+        if
+            LocalPlayer.Character
+            == Character
+        then
+
+            return true
+
+        end
+
+
+        return false
+
+    end
+
+
+    ---------------------------------------------------------
+    -- BODY PART VALIDATION
+    ---------------------------------------------------------
+
+    local function IsBodyPart(
+        Object
+    )
+
+        if
+            not Object:
                 IsA(
                     "BasePart"
                 )
         then
+
             return false
+
         end
 
 
-        -----------------------------------------------------
-        -- ROOT NÃO REPRESENTA O CORPO VISUAL
-        -----------------------------------------------------
-
         if
-            Part.Name
-            == "HumanoidRootPart"
+            not BodyPartNames[
+                Object.Name
+            ]
         then
+
             return false
+
         end
 
 
@@ -336,7 +538,7 @@ function ESP.Init(Config)
         -----------------------------------------------------
 
         if
-            Part:
+            Object:
                 FindFirstAncestorWhichIsA(
                     "Accessory"
                 )
@@ -352,7 +554,7 @@ function ESP.Init(Config)
         -----------------------------------------------------
 
         if
-            Part:
+            Object:
                 FindFirstAncestorWhichIsA(
                     "Tool"
                 )
@@ -367,27 +569,266 @@ function ESP.Init(Config)
         -- WEAPON RIG
         -----------------------------------------------------
 
-        local WeaponRig =
-            Character:
-                FindFirstChild(
-                    "WeaponRig"
-                )
+        local Parent =
+            Object.Parent
 
 
-        if
-            WeaponRig
-            and Part:
-                IsDescendantOf(
-                    WeaponRig
-                )
-        then
+        while Parent do
 
-            return false
+            if
+                Parent.Name
+                == "WeaponRig"
+            then
+
+                return false
+
+            end
+
+
+            Parent =
+                Parent.Parent
 
         end
 
 
         return true
+
+    end
+
+
+    ---------------------------------------------------------
+    -- CACHE BODY PART
+    ---------------------------------------------------------
+
+    local function AddBodyPart(
+        Data,
+        Object
+    )
+
+        if
+            not IsBodyPart(
+                Object
+            )
+        then
+
+            return
+
+        end
+
+
+        Data.BodyParts[
+            Object
+        ] =
+            true
+
+    end
+
+
+    ---------------------------------------------------------
+    -- REMOVE BODY PART
+    ---------------------------------------------------------
+
+    local function RemoveBodyPart(
+        Data,
+        Object
+    )
+
+        Data.BodyParts[
+            Object
+        ] =
+            nil
+
+    end
+
+
+    ---------------------------------------------------------
+    -- REGISTER ENTITY
+    ---------------------------------------------------------
+
+    local function RegisterEntity(
+        Character
+    )
+
+        if Destroyed then
+            return
+        end
+
+
+        if
+            not Character:
+                IsA(
+                    "Model"
+                )
+        then
+
+            return
+        end
+
+
+        if
+            Entities[
+                Character
+            ]
+        then
+
+            return
+        end
+
+
+        if
+            IsLocalEntity(
+                Character
+            )
+        then
+
+            return
+        end
+
+
+        local Data = {
+
+            Character =
+                Character,
+
+            BodyParts =
+                {},
+
+            Visuals =
+                CreateVisuals(
+                    Character
+                ),
+
+            Connections =
+                {},
+
+        }
+
+
+        Entities[
+            Character
+        ] =
+            Data
+
+
+        -----------------------------------------------------
+        -- BUILD INITIAL BODY CACHE
+        -----------------------------------------------------
+
+        for _, Object
+            in ipairs(
+                Character:
+                    GetDescendants()
+            )
+        do
+
+            AddBodyPart(
+                Data,
+                Object
+            )
+
+        end
+
+
+        -----------------------------------------------------
+        -- NEW BODY PARTS
+        -----------------------------------------------------
+
+        Data.Connections.DescendantAdded =
+            Character.DescendantAdded:
+                Connect(function(Object)
+
+                    AddBodyPart(
+                        Data,
+                        Object
+                    )
+
+                end)
+
+
+        -----------------------------------------------------
+        -- REMOVED BODY PARTS
+        -----------------------------------------------------
+
+        Data.Connections.DescendantRemoving =
+            Character.DescendantRemoving:
+                Connect(function(Object)
+
+                    RemoveBodyPart(
+                        Data,
+                        Object
+                    )
+
+                end)
+
+    end
+
+
+    ---------------------------------------------------------
+    -- UNREGISTER ENTITY
+    ---------------------------------------------------------
+
+    local function UnregisterEntity(
+        Character
+    )
+
+        local Data =
+            Entities[
+                Character
+            ]
+
+
+        if not Data then
+            return
+        end
+
+
+        -----------------------------------------------------
+        -- CONNECTIONS
+        -----------------------------------------------------
+
+        for _, Connection
+            in pairs(
+                Data.Connections
+            )
+        do
+
+            if Connection then
+
+                Connection:
+                    Disconnect()
+
+            end
+
+        end
+
+
+        -----------------------------------------------------
+        -- VISUALS
+        -----------------------------------------------------
+
+        for _, Object
+            in pairs(
+                Data.Visuals
+            )
+        do
+
+            if
+                typeof(Object)
+                == "Instance"
+            then
+
+                Object:
+                    Destroy()
+
+            end
+
+        end
+
+
+        Entities[
+            Character
+        ] =
+            nil
 
     end
 
@@ -406,69 +847,47 @@ function ESP.Init(Config)
             Part.Size / 2
 
 
+        local PartCFrame =
+            Part.CFrame
+
+
+        -----------------------------------------------------
+        -- 8 CORNERS
+        -----------------------------------------------------
+
+        local X =
+            Half.X
+
+        local Y =
+            Half.Y
+
+        local Z =
+            Half.Z
+
+
         local Corners = {
 
-            Vector3.new(
-                -Half.X,
-                -Half.Y,
-                -Half.Z
-            ),
+            Vector3.new(-X, -Y, -Z),
+            Vector3.new(-X, -Y,  Z),
 
-            Vector3.new(
-                -Half.X,
-                -Half.Y,
-                Half.Z
-            ),
+            Vector3.new(-X,  Y, -Z),
+            Vector3.new(-X,  Y,  Z),
 
-            Vector3.new(
-                -Half.X,
-                Half.Y,
-                -Half.Z
-            ),
+            Vector3.new( X, -Y, -Z),
+            Vector3.new( X, -Y,  Z),
 
-            Vector3.new(
-                -Half.X,
-                Half.Y,
-                Half.Z
-            ),
-
-            Vector3.new(
-                Half.X,
-                -Half.Y,
-                -Half.Z
-            ),
-
-            Vector3.new(
-                Half.X,
-                -Half.Y,
-                Half.Z
-            ),
-
-            Vector3.new(
-                Half.X,
-                Half.Y,
-                -Half.Z
-            ),
-
-            Vector3.new(
-                Half.X,
-                Half.Y,
-                Half.Z
-            ),
+            Vector3.new( X,  Y, -Z),
+            Vector3.new( X,  Y,  Z),
 
         }
 
 
-        for _, Offset
-            in ipairs(
-                Corners
-            )
-        do
+        for Index = 1, 8 do
 
             local WorldPosition =
-                Part.CFrame:
+                PartCFrame:
                     PointToWorldSpace(
-                        Offset
+                        Corners[Index]
                     )
 
 
@@ -488,58 +907,69 @@ function ESP.Init(Config)
                     true
 
 
-                Bounds.MinX =
-                    math.min(
-                        Bounds.MinX,
+                if
+                    ScreenPosition.X
+                    < Bounds.MinX
+                then
+
+                    Bounds.MinX =
                         ScreenPosition.X
-                    )
+
+                end
 
 
-                Bounds.MinY =
-                    math.min(
-                        Bounds.MinY,
+                if
+                    ScreenPosition.Y
+                    < Bounds.MinY
+                then
+
+                    Bounds.MinY =
                         ScreenPosition.Y
-                    )
+
+                end
 
 
-                Bounds.MaxX =
-                    math.max(
-                        Bounds.MaxX,
+                if
+                    ScreenPosition.X
+                    > Bounds.MaxX
+                then
+
+                    Bounds.MaxX =
                         ScreenPosition.X
-                    )
+
+                end
 
 
-                Bounds.MaxY =
-                    math.max(
-                        Bounds.MaxY,
+                if
+                    ScreenPosition.Y
+                    > Bounds.MaxY
+                then
+
+                    Bounds.MaxY =
                         ScreenPosition.Y
-                    )
+
+                end
 
             end
+
         end
+
     end
 
 
     ---------------------------------------------------------
-    -- CHARACTER BOUNDS
+    -- CHARACTER SCREEN BOUNDS
     ---------------------------------------------------------
 
     local function GetCharacterBounds(
-        Character,
-        Camera
+        Data,
+        Camera,
+        Root
     )
 
-        local Root =
-            Character:
-                FindFirstChild(
-                    "HumanoidRootPart"
-                )
-
-
-        if not Root then
-            return nil
-        end
-
+        -----------------------------------------------------
+        -- ROOT MUST BE IN FRONT
+        -----------------------------------------------------
 
         local RootScreen =
             Camera:
@@ -578,25 +1008,36 @@ function ESP.Init(Config)
         }
 
 
-        for _, Object
-            in ipairs(
-                Character:
-                    GetDescendants()
+        -----------------------------------------------------
+        -- CACHED PARTS
+        -----------------------------------------------------
+
+        for Part
+            in pairs(
+                Data.BodyParts
             )
         do
 
             if
-                IsBodyPart(
-                    Object,
-                    Character
-                )
+                Part.Parent
+                and Part:
+                    IsDescendantOf(
+                        Data.Character
+                    )
             then
 
                 ProjectPart(
-                    Object,
+                    Part,
                     Camera,
                     Bounds
                 )
+
+            else
+
+                Data.BodyParts[
+                    Part
+                ] =
+                    nil
 
             end
 
@@ -612,13 +1053,13 @@ function ESP.Init(Config)
         end
 
 
+        -----------------------------------------------------
+        -- VIEWPORT CHECK
+        -----------------------------------------------------
+
         local Viewport =
             Camera.ViewportSize
 
-
-        -----------------------------------------------------
-        -- COMPLETAMENTE FORA DA TELA
-        -----------------------------------------------------
 
         if
             Bounds.MaxX < 0
@@ -631,6 +1072,10 @@ function ESP.Init(Config)
 
         end
 
+
+        -----------------------------------------------------
+        -- PADDING
+        -----------------------------------------------------
 
         local Padding =
             tonumber(
@@ -650,18 +1095,14 @@ function ESP.Init(Config)
 
 
         local Width =
-            (
-                Bounds.MaxX
-                - Bounds.MinX
-            )
+            Bounds.MaxX
+            - Bounds.MinX
             + Padding * 2
 
 
         local Height =
-            (
-                Bounds.MaxY
-                - Bounds.MinY
-            )
+            Bounds.MaxY
+            - Bounds.MinY
             + Padding * 2
 
 
@@ -693,39 +1134,29 @@ function ESP.Init(Config)
                 X
                 + Width / 2,
 
-            CenterY =
-                Y
-                + Height / 2,
-
         }
 
     end
 
 
     ---------------------------------------------------------
-    -- UPDATE PLAYER
+    -- UPDATE ENTITY
     ---------------------------------------------------------
 
-    local function UpdatePlayer(
-        Player,
-        Camera,
-        LocalRoot
+    local function UpdateEntity(
+        Data,
+        Camera
     )
 
-        local Data =
-            ESPObjects[
-                Player
-            ]
-            or CreateESP(
-                Player
-            )
-
+        -----------------------------------------------------
+        -- MASTER TOGGLE
+        -----------------------------------------------------
 
         if
             not Settings.Enabled
         then
 
-            HideESP(
+            HideEntity(
                 Data
             )
 
@@ -735,19 +1166,21 @@ function ESP.Init(Config)
 
 
         local Character =
-            Player.Character
+            Data.Character
 
 
-        if not Character then
-
-            HideESP(
-                Data
-            )
+        if
+            not Character.Parent
+        then
 
             return
 
         end
 
+
+        -----------------------------------------------------
+        -- ROOT
+        -----------------------------------------------------
 
         local Root =
             Character:
@@ -755,6 +1188,10 @@ function ESP.Init(Config)
                     "HumanoidRootPart"
                 )
 
+
+        -----------------------------------------------------
+        -- HUMANOID
+        -----------------------------------------------------
 
         local Humanoid =
             Character:
@@ -769,7 +1206,7 @@ function ESP.Init(Config)
             or Humanoid.Health <= 0
         then
 
-            HideESP(
+            HideEntity(
                 Data
             )
 
@@ -783,12 +1220,10 @@ function ESP.Init(Config)
         -----------------------------------------------------
 
         local Distance =
-            LocalRoot
-            and (
+            (
                 Root.Position
-                - LocalRoot.Position
+                - Camera.CFrame.Position
             ).Magnitude
-            or 0
 
 
         local MaxDistance =
@@ -803,7 +1238,7 @@ function ESP.Init(Config)
             > MaxDistance
         then
 
-            HideESP(
+            HideEntity(
                 Data
             )
 
@@ -813,19 +1248,20 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- BOUNDS
+        -- SCREEN BOUNDS
         -----------------------------------------------------
 
         local Bounds =
             GetCharacterBounds(
-                Character,
-                Camera
+                Data,
+                Camera,
+                Root
             )
 
 
         if not Bounds then
 
-            HideESP(
+            HideEntity(
                 Data
             )
 
@@ -834,30 +1270,34 @@ function ESP.Init(Config)
         end
 
 
+        local Visuals =
+            Data.Visuals
+
+
         -----------------------------------------------------
-        -- COLORS / THICKNESS
+        -- APPEARANCE
         -----------------------------------------------------
 
-        Data.Stroke.Color =
+        Visuals.Stroke.Color =
             Settings.BoxColor
 
 
-        Data.Stroke.Thickness =
+        Visuals.Stroke.Thickness =
             tonumber(
                 Settings.BoxThickness
             )
             or 1
 
 
-        Data.Name.TextColor3 =
+        Visuals.Name.TextColor3 =
             Settings.TextColor
 
 
-        Data.Health.TextColor3 =
+        Visuals.Health.TextColor3 =
             Settings.TextColor
 
 
-        Data.Distance.TextColor3 =
+        Visuals.Distance.TextColor3 =
             Settings.TextColor
 
 
@@ -865,7 +1305,7 @@ function ESP.Init(Config)
         -- BOX
         -----------------------------------------------------
 
-        Data.Box.Position =
+        Visuals.Box.Position =
             UDim2.fromOffset(
                 math.floor(
                     Bounds.X
@@ -877,7 +1317,7 @@ function ESP.Init(Config)
             )
 
 
-        Data.Box.Size =
+        Visuals.Box.Size =
             UDim2.fromOffset(
                 math.floor(
                     Bounds.Width
@@ -889,27 +1329,39 @@ function ESP.Init(Config)
             )
 
 
-        Data.Box.Visible =
+        Visuals.Box.Visible =
             Settings.Box
             == true
 
 
         -----------------------------------------------------
-        -- NAME
+        -- PLAYER NAME
         -----------------------------------------------------
 
-        Data.Name.Position =
+        local Player =
+            ResolvePlayer(
+                Character
+            )
+
+
+        local DisplayName =
+            Player
+            and Player.Name
+            or Character.Name
+
+
+        Visuals.Name.Text =
+            DisplayName
+
+
+        Visuals.Name.Position =
             UDim2.fromOffset(
                 Bounds.CenterX,
                 Bounds.Y - 12
             )
 
 
-        Data.Name.Text =
-            Player.Name
-
-
-        Data.Name.Visible =
+        Visuals.Name.Visible =
             Settings.Name
             == true
 
@@ -918,17 +1370,7 @@ function ESP.Init(Config)
         -- HEALTH
         -----------------------------------------------------
 
-        Data.Health.Position =
-            UDim2.fromOffset(
-                Bounds.CenterX,
-
-                Bounds.Y
-                + Bounds.Height
-                + 10
-            )
-
-
-        Data.Health.Text =
+        Visuals.Health.Text =
             string.format(
                 "%d/%d HP",
 
@@ -942,16 +1384,33 @@ function ESP.Init(Config)
             )
 
 
-        Data.Health.Visible =
+        Visuals.Health.Position =
+            UDim2.fromOffset(
+                Bounds.CenterX,
+
+                Bounds.Y
+                + Bounds.Height
+                + 10
+            )
+
+
+        Visuals.Health.Visible =
             Settings.Health
             == true
 
 
         -----------------------------------------------------
-        -- DISTANCE
+        -- DISTANCE TEXT
         -----------------------------------------------------
 
-        Data.Distance.Position =
+        Visuals.Distance.Text =
+            string.format(
+                "%.0f studs",
+                Distance
+            )
+
+
+        Visuals.Distance.Position =
             UDim2.fromOffset(
                 Bounds.CenterX,
 
@@ -961,14 +1420,7 @@ function ESP.Init(Config)
             )
 
 
-        Data.Distance.Text =
-            string.format(
-                "%.0f studs",
-                Distance
-            )
-
-
-        Data.Distance.Visible =
+        Visuals.Distance.Visible =
             Settings.Distance
             == true
 
@@ -976,16 +1428,82 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- RENDER
+    -- REGISTER EXISTING ENTITIES
+    ---------------------------------------------------------
+
+    for _, Character
+        in ipairs(
+            EntitiesFolder:
+                GetChildren()
+        )
+    do
+
+        RegisterEntity(
+            Character
+        )
+
+    end
+
+
+    ---------------------------------------------------------
+    -- ENTITY ADDED
+    ---------------------------------------------------------
+
+    Connections.EntityAdded =
+        EntitiesFolder.ChildAdded:
+            Connect(function(Character)
+
+                RegisterEntity(
+                    Character
+                )
+
+            end)
+
+
+    ---------------------------------------------------------
+    -- ENTITY REMOVED
+    ---------------------------------------------------------
+
+    Connections.EntityRemoved =
+        EntitiesFolder.ChildRemoved:
+            Connect(function(Character)
+
+                UnregisterEntity(
+                    Character
+                )
+
+            end)
+
+
+    ---------------------------------------------------------
+    -- RENDER LOOP
     ---------------------------------------------------------
 
     Connections.Render =
         RunService.RenderStepped:
-            Connect(function()
+            Connect(function(DeltaTime)
 
                 if Destroyed then
                     return
                 end
+
+
+                UpdateAccumulator +=
+                    DeltaTime
+
+
+                if
+                    UpdateAccumulator
+                    < UPDATE_RATE
+                then
+
+                    return
+
+                end
+
+
+                UpdateAccumulator =
+                    0
 
 
                 local Camera =
@@ -997,34 +1515,57 @@ function ESP.Init(Config)
                 end
 
 
-                local LocalCharacter =
-                    LocalPlayer.Character
+                -------------------------------------------------
+                -- MASTER DISABLED
+                -------------------------------------------------
 
+                if
+                    not Settings.Enabled
+                then
 
-                local LocalRoot =
-                    LocalCharacter
-                    and LocalCharacter:
-                        FindFirstChild(
-                            "HumanoidRootPart"
+                    for _, Data
+                        in pairs(
+                            Entities
+                        )
+                    do
+
+                        HideEntity(
+                            Data
                         )
 
+                    end
 
-                for _, Player
-                    in ipairs(
-                        Players:
-                            GetPlayers()
+
+                    return
+
+                end
+
+
+                -------------------------------------------------
+                -- UPDATE
+                -------------------------------------------------
+
+                for Character,
+                    Data
+                    in pairs(
+                        Entities
                     )
                 do
 
                     if
-                        Player
-                        ~= LocalPlayer
+                        Character.Parent
+                        == EntitiesFolder
                     then
 
-                        UpdatePlayer(
-                            Player,
-                            Camera,
-                            LocalRoot
+                        UpdateEntity(
+                            Data,
+                            Camera
+                        )
+
+                    else
+
+                        UnregisterEntity(
+                            Character
                         )
 
                     end
@@ -1035,22 +1576,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- PLAYER REMOVING
-    ---------------------------------------------------------
-
-    Connections.PlayerRemoving =
-        Players.PlayerRemoving:
-            Connect(function(Player)
-
-                RemoveESP(
-                    Player
-                )
-
-            end)
-
-
-    ---------------------------------------------------------
-    -- API
+    -- CONTROLLER
     ---------------------------------------------------------
 
     local Controller =
@@ -1067,6 +1593,36 @@ function ESP.Init(Config)
     end
 
 
+    ---------------------------------------------------------
+    -- DEBUG API
+    ---------------------------------------------------------
+
+    function Controller.GetEntityCount()
+
+        local Count =
+            0
+
+
+        for _
+            in pairs(
+                Entities
+            )
+        do
+
+            Count += 1
+
+        end
+
+
+        return Count
+
+    end
+
+
+    ---------------------------------------------------------
+    -- DESTROY
+    ---------------------------------------------------------
+
     function Controller.Destroy()
 
         if Destroyed then
@@ -1078,6 +1634,10 @@ function ESP.Init(Config)
             true
 
 
+        -----------------------------------------------------
+        -- GLOBAL CONNECTIONS
+        -----------------------------------------------------
+
         for _, Connection
             in pairs(
                 Connections
@@ -1085,8 +1645,10 @@ function ESP.Init(Config)
         do
 
             if Connection then
+
                 Connection:
                     Disconnect()
+
             end
 
         end
@@ -1097,22 +1659,50 @@ function ESP.Init(Config)
         )
 
 
-        for Player
+        -----------------------------------------------------
+        -- ENTITIES
+        -----------------------------------------------------
+
+        local ToRemove =
+            {}
+
+
+        for Character
             in pairs(
-                ESPObjects
+                Entities
             )
         do
 
-            RemoveESP(
-                Player
+            table.insert(
+                ToRemove,
+                Character
             )
 
         end
 
 
+        for _, Character
+            in ipairs(
+                ToRemove
+            )
+        do
+
+            UnregisterEntity(
+                Character
+            )
+
+        end
+
+
+        -----------------------------------------------------
+        -- GUI
+        -----------------------------------------------------
+
         if ScreenGui then
+
             ScreenGui:
                 Destroy()
+
         end
 
     end
