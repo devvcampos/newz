@@ -331,6 +331,97 @@ function UI.Init(Config)
 
             })
 
+            ESPSection:
+    AddToggle({
+
+        Name =
+            "Visibility Check",
+
+        Flag =
+            "esp_visibility",
+
+        Default =
+            Config.ESP.VisibilityCheck,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.VisibilityCheck =
+                    Value
+
+            end,
+
+    })
+
+
+ESPSection:
+    AddToggle({
+
+        Name =
+            "Team Check",
+
+        Flag =
+            "esp_team_check",
+
+        Default =
+            Config.ESP.TeamCheck,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.TeamCheck =
+                    Value
+
+            end,
+
+    })
+
+
+ESPSection:
+    AddToggle({
+
+        Name =
+            "Players Only",
+
+        Flag =
+            "esp_players_only",
+
+        Default =
+            Config.ESP.PlayersOnly,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.PlayersOnly =
+                    Value
+
+            end,
+
+    })
+
+
+ESPSection:
+    AddToggle({
+
+        Name =
+            "Dynamic Health Color",
+
+        Flag =
+            "esp_dynamic_health",
+
+        Default =
+            Config.ESP.DynamicHealthColor,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.DynamicHealthColor =
+                    Value
+
+            end,
+
+    })
+
 
     ---------------------------------------------------------
     -- APPEARANCE SECTION
@@ -347,6 +438,115 @@ function UI.Init(Config)
                     "right",
 
             })
+
+
+            Appearance:
+    AddDropdown({
+
+        Name =
+            "Box Style",
+
+        Flag =
+            "esp_box_style",
+
+        Values = {
+            "Corner",
+            "Full",
+        },
+
+        Default =
+            Config.ESP.BoxStyle,
+
+        Multi =
+            false,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.BoxStyle =
+                    Value
+
+            end,
+
+    })
+
+
+Appearance:
+    AddColorPicker({
+
+        Name =
+            "Visible Color",
+
+        Flag =
+            "esp_visible_color",
+
+        Default =
+            Config.ESP.VisibleColor,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.VisibleColor =
+                    Value
+
+            end,
+
+    })
+
+
+Appearance:
+    AddColorPicker({
+
+        Name =
+            "Hidden Color",
+
+        Flag =
+            "esp_hidden_color",
+
+        Default =
+            Config.ESP.HiddenColor,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.HiddenColor =
+                    Value
+
+            end,
+
+    })
+
+
+Appearance:
+    AddSlider({
+
+        Name =
+            "Corner Size",
+
+        Flag =
+            "esp_corner_ratio",
+
+        Min =
+            0.10,
+
+        Max =
+            0.50,
+
+        Round =
+            2,
+
+        Default =
+            Config.ESP.CornerRatio,
+
+        Callback =
+            function(Value)
+
+                Config.ESP.CornerRatio =
+                    Value
+
+            end,
+
+    })
 
 
     ---------------------------------------------------------

@@ -37,20 +37,54 @@ Config.ESP = {
     Health = true,
     Distance = true,
 
-    BoxColor = Color3.fromRGB(
-        255,
-        255,
-        255
-    ),
+    -----------------------------------------------------
+    -- FILTERS
+    -----------------------------------------------------
 
-    TextColor = Color3.fromRGB(
-        255,
-        255,
-        255
-    ),
+    VisibilityCheck = false,
+    TeamCheck = false,
+    PlayersOnly = false,
+
+    -----------------------------------------------------
+    -- APPEARANCE
+    -----------------------------------------------------
+
+    BoxStyle = "Corner",
+
+    BoxColor =
+        Color3.fromRGB(
+            255,
+            255,
+            255
+        ),
+
+    VisibleColor =
+        Color3.fromRGB(
+            90,
+            255,
+            130
+        ),
+
+    HiddenColor =
+        Color3.fromRGB(
+            255,
+            90,
+            90
+        ),
+
+    TextColor =
+        Color3.fromRGB(
+            255,
+            255,
+            255
+        ),
+
+    DynamicHealthColor = true,
 
     BoxThickness = 1,
     BoxPadding = 2,
+
+    CornerRatio = 0.25,
 
     MaxDistance = 1000,
 }

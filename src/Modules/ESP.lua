@@ -25,7 +25,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- GAME ENTITIES
+    -- ENTITY FOLDER
     ---------------------------------------------------------
 
     local EntitiesFolder =
@@ -50,13 +50,13 @@ function ESP.Init(Config)
         {}
 
 
+    local LocalEntity =
+        nil
+
+
     ---------------------------------------------------------
     -- PERFORMANCE
     ---------------------------------------------------------
-
-    -- O ESP visual é atualizado a 30 Hz.
-    -- Isso já é suficientemente suave e corta bastante
-    -- o custo das projeções 3D -> 2D.
 
     local UPDATE_RATE =
         1 / 30
@@ -67,13 +67,29 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- BODY PART NAMES
+    -- VISIBILITY
+    ---------------------------------------------------------
+
+    local VisibilityParams =
+        RaycastParams.new()
+
+
+    VisibilityParams.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+
+    VisibilityParams.IgnoreWater =
+        true
+
+
+    ---------------------------------------------------------
+    -- BODY PARTS
     ---------------------------------------------------------
 
     local BodyPartNames = {
 
         -----------------------------------------------------
-        -- CUSTOM PT-BR
+        -- CUSTOM CHARACTER
         -----------------------------------------------------
 
         ["Cabeça"] = true,
@@ -96,6 +112,7 @@ function ESP.Init(Config)
         -----------------------------------------------------
 
         ["Head"] = true,
+
         ["Torso"] = true,
 
         ["Left Arm"] = true,
@@ -132,7 +149,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- ESP GUI
+    -- GUI
     ---------------------------------------------------------
 
     local PlayerGui =
@@ -150,7 +167,10 @@ function ESP.Init(Config)
 
 
     if OldGui then
-        OldGui:Destroy()
+
+        OldGui:
+            Destroy()
+
     end
 
 
@@ -185,7 +205,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- CREATE TEXT
+    -- TEXT
     ---------------------------------------------------------
 
     local function CreateText()
@@ -202,7 +222,7 @@ function ESP.Init(Config)
 
         Text.Size =
             UDim2.fromOffset(
-                200,
+                220,
                 18
             )
 
@@ -224,6 +244,11 @@ function ESP.Init(Config)
 
         Text.TextColor3 =
             Settings.TextColor
+            or Color3.new(
+                1,
+                1,
+                1
+            )
 
 
         Text.TextStrokeColor3 =
@@ -294,6 +319,10 @@ function ESP.Init(Config)
             ScreenGui
 
 
+        -----------------------------------------------------
+        -- FULL BOX STROKE
+        -----------------------------------------------------
+
         local Stroke =
             Instance.new(
                 "UIStroke"
@@ -302,19 +331,87 @@ function ESP.Init(Config)
 
         Stroke.Color =
             Settings.BoxColor
+            or Color3.new(
+                1,
+                1,
+                1
+            )
 
 
         Stroke.Thickness =
             Settings.BoxThickness
+            or 1
 
 
         Stroke.LineJoinMode =
             Enum.LineJoinMode.Miter
 
 
+        Stroke.Enabled =
+            false
+
+
         Stroke.Parent =
             Box
 
+
+        -----------------------------------------------------
+        -- CORNER BOX
+        -----------------------------------------------------
+
+        local Corners =
+            {}
+
+
+        for Index = 1, 8 do
+
+            local Line =
+                Instance.new(
+                    "Frame"
+                )
+
+
+            Line.Name =
+                "Corner"
+                .. Index
+
+
+            Line.BorderSizePixel =
+                0
+
+
+            Line.BackgroundColor3 =
+                Settings.BoxColor
+                or Color3.new(
+                    1,
+                    1,
+                    1
+                )
+
+
+            Line.Visible =
+                false
+
+
+            Line.ZIndex =
+                11
+
+
+            Line.Parent =
+                Box
+
+
+            Corners[
+                Index
+            ] =
+                Line
+
+        end
+
+
+        -----------------------------------------------------
+        -- DATA
+        -----------------------------------------------------
 
         return {
 
@@ -323,6 +420,9 @@ function ESP.Init(Config)
 
             Stroke =
                 Stroke,
+
+            Corners =
+                Corners,
 
             Name =
                 CreateText(),
@@ -346,18 +446,18 @@ function ESP.Init(Config)
         Data
     )
 
-        if not Data then
+        if
+            not Data
+            or not Data.Visuals
+        then
+
             return
+
         end
 
 
         local Visuals =
             Data.Visuals
-
-
-        if not Visuals then
-            return
-        end
 
 
         Visuals.Box.Visible =
@@ -379,7 +479,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- PLAYER RESOLUTION
+    -- RESOLVE PLAYER
     ---------------------------------------------------------
 
     local function ResolvePlayer(
@@ -387,7 +487,7 @@ function ESP.Init(Config)
     )
 
         -----------------------------------------------------
-        -- ATRIBUTO USER ID
+        -- USERID ATTRIBUTE
         -----------------------------------------------------
 
         local UserId =
@@ -399,20 +499,31 @@ function ESP.Init(Config)
 
         if UserId then
 
-            local Success,
-                Player =
-                    pcall(
-                        Players.GetPlayerByUserId,
-                        Players,
-                        tonumber(UserId)
-                    )
+            local NumericUserId =
+                tonumber(
+                    UserId
+                )
 
 
-            if Success
-                and Player
-            then
+            if NumericUserId then
 
-                return Player
+                local Success,
+                    Player =
+                        pcall(
+                            Players.GetPlayerByUserId,
+                            Players,
+                            NumericUserId
+                        )
+
+
+                if
+                    Success
+                    and Player
+                then
+
+                    return Player
+
+                end
 
             end
 
@@ -420,7 +531,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- NOME DO MODEL
+        -- CHARACTER NAME
         -----------------------------------------------------
 
         local Player =
@@ -430,11 +541,37 @@ function ESP.Init(Config)
                 )
 
 
-        if Player
-            and Player:IsA("Player")
+        if
+            Player
+            and Player:IsA(
+                "Player"
+            )
         then
 
             return Player
+
+        end
+
+
+        -----------------------------------------------------
+        -- DISPLAY NAME
+        -----------------------------------------------------
+
+        for _, OtherPlayer
+            in ipairs(
+                Players:
+                    GetPlayers()
+            )
+        do
+
+            if
+                OtherPlayer.DisplayName
+                == Character.Name
+            then
+
+                return OtherPlayer
+
+            end
 
         end
 
@@ -445,21 +582,16 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- LOCAL ENTITY?
+    -- LOCAL ENTITY
     ---------------------------------------------------------
 
     local function IsLocalEntity(
         Character
     )
 
-        local Player =
-            ResolvePlayer(
-                Character
-            )
-
-
-        if Player
-            == LocalPlayer
+        if
+            LocalPlayer.Character
+            == Character
         then
 
             return true
@@ -487,23 +619,21 @@ function ESP.Init(Config)
         end
 
 
-        if
-            LocalPlayer.Character
-            == Character
-        then
-
-            return true
-
-        end
+        local Player =
+            ResolvePlayer(
+                Character
+            )
 
 
-        return false
+        return
+            Player
+            == LocalPlayer
 
     end
 
 
     ---------------------------------------------------------
-    -- BODY PART VALIDATION
+    -- BODY PART CHECK
     ---------------------------------------------------------
 
     local function IsBodyPart(
@@ -534,7 +664,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- ACCESSORY
+        -- ACCESSORIES
         -----------------------------------------------------
 
         if
@@ -550,7 +680,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- TOOL
+        -- TOOLS
         -----------------------------------------------------
 
         if
@@ -606,37 +736,17 @@ function ESP.Init(Config)
     )
 
         if
-            not IsBodyPart(
+            IsBodyPart(
                 Object
             )
         then
 
-            return
+            Data.BodyParts[
+                Object
+            ] =
+                true
 
         end
-
-
-        Data.BodyParts[
-            Object
-        ] =
-            true
-
-    end
-
-
-    ---------------------------------------------------------
-    -- REMOVE BODY PART
-    ---------------------------------------------------------
-
-    local function RemoveBodyPart(
-        Data,
-        Object
-    )
-
-        Data.BodyParts[
-            Object
-        ] =
-            nil
 
     end
 
@@ -662,6 +772,7 @@ function ESP.Init(Config)
         then
 
             return
+
         end
 
 
@@ -672,8 +783,13 @@ function ESP.Init(Config)
         then
 
             return
+
         end
 
+
+        -----------------------------------------------------
+        -- LOCAL PLAYER
+        -----------------------------------------------------
 
         if
             IsLocalEntity(
@@ -681,9 +797,17 @@ function ESP.Init(Config)
             )
         then
 
+            LocalEntity =
+                Character
+
             return
+
         end
 
+
+        -----------------------------------------------------
+        -- DATA
+        -----------------------------------------------------
 
         local Data = {
 
@@ -701,6 +825,12 @@ function ESP.Init(Config)
             Connections =
                 {},
 
+            LastVisibilityCheck =
+                0,
+
+            LastVisibility =
+                false,
+
         }
 
 
@@ -711,7 +841,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- BUILD INITIAL BODY CACHE
+        -- INITIAL CACHE
         -----------------------------------------------------
 
         for _, Object
@@ -730,7 +860,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- NEW BODY PARTS
+        -- NEW PARTS
         -----------------------------------------------------
 
         Data.Connections.DescendantAdded =
@@ -746,17 +876,17 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- REMOVED BODY PARTS
+        -- REMOVED PARTS
         -----------------------------------------------------
 
         Data.Connections.DescendantRemoving =
             Character.DescendantRemoving:
                 Connect(function(Object)
 
-                    RemoveBodyPart(
-                        Data,
+                    Data.BodyParts[
                         Object
-                    )
+                    ] =
+                        nil
 
                 end)
 
@@ -764,7 +894,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- UNREGISTER ENTITY
+    -- UNREGISTER
     ---------------------------------------------------------
 
     local function UnregisterEntity(
@@ -778,7 +908,20 @@ function ESP.Init(Config)
 
 
         if not Data then
+
+            if
+                Character
+                == LocalEntity
+            then
+
+                LocalEntity =
+                    nil
+
+            end
+
+
             return
+
         end
 
 
@@ -794,8 +937,12 @@ function ESP.Init(Config)
 
             if Connection then
 
-                Connection:
-                    Disconnect()
+                pcall(function()
+
+                    Connection:
+                        Disconnect()
+
+                end)
 
             end
 
@@ -806,19 +953,46 @@ function ESP.Init(Config)
         -- VISUALS
         -----------------------------------------------------
 
-        for _, Object
-            in pairs(
-                Data.Visuals
-            )
-        do
+        if Data.Visuals then
 
             if
-                typeof(Object)
-                == "Instance"
+                Data.Visuals.Box
             then
 
-                Object:
-                    Destroy()
+                pcall(function()
+
+                    Data.Visuals.Box:
+                        Destroy()
+
+                end)
+
+            end
+
+
+            for _, Name
+                in ipairs({
+                    "Name",
+                    "Health",
+                    "Distance"
+                })
+            do
+
+                local Object =
+                    Data.Visuals[
+                        Name
+                    ]
+
+
+                if Object then
+
+                    pcall(function()
+
+                        Object:
+                            Destroy()
+
+                    end)
+
+                end
 
             end
 
@@ -829,6 +1003,271 @@ function ESP.Init(Config)
             Character
         ] =
             nil
+
+    end
+
+
+    ---------------------------------------------------------
+    -- TEAM CHECK
+    ---------------------------------------------------------
+
+    local function IsTeammate(
+        Character
+    )
+
+        if
+            not Settings.TeamCheck
+        then
+
+            return false
+
+        end
+
+
+        local Player =
+            ResolvePlayer(
+                Character
+            )
+
+
+        if not Player then
+            return false
+        end
+
+
+        if
+            not LocalPlayer.Team
+            or not Player.Team
+        then
+
+            return false
+        end
+
+
+        return
+            Player.Team
+            == LocalPlayer.Team
+
+    end
+
+
+    ---------------------------------------------------------
+    -- HEALTH COLOR
+    ---------------------------------------------------------
+
+    local function GetHealthColor(
+        Humanoid
+    )
+
+        if
+            not Settings.DynamicHealthColor
+        then
+
+            return
+                Settings.TextColor
+                or Color3.new(
+                    1,
+                    1,
+                    1
+                )
+
+        end
+
+
+        local MaxHealth =
+            math.max(
+                Humanoid.MaxHealth,
+                1
+            )
+
+
+        local Ratio =
+            math.clamp(
+                Humanoid.Health
+                / MaxHealth,
+                0,
+                1
+            )
+
+
+        -----------------------------------------------------
+        -- RED -> YELLOW -> GREEN
+        -----------------------------------------------------
+
+        return Color3.fromHSV(
+            Ratio * 0.33,
+            0.85,
+            1
+        )
+
+    end
+
+
+    ---------------------------------------------------------
+    -- VISIBILITY CHECK
+    ---------------------------------------------------------
+
+    local function IsEntityVisible(
+        Data,
+        Camera,
+        Root
+    )
+
+        if
+            not Settings.VisibilityCheck
+        then
+
+            return true
+
+        end
+
+
+        -----------------------------------------------------
+        -- THROTTLE
+        -----------------------------------------------------
+
+        local Now =
+            os.clock()
+
+
+        if
+            Now
+            - Data.LastVisibilityCheck
+            < 0.10
+        then
+
+            return
+                Data.LastVisibility
+
+        end
+
+
+        Data.LastVisibilityCheck =
+            Now
+
+
+        -----------------------------------------------------
+        -- TARGET
+        -----------------------------------------------------
+
+        local Character =
+            Data.Character
+
+
+        local Target =
+            Character:
+                FindFirstChild(
+                    "Cabeça"
+                )
+            or Character:
+                FindFirstChild(
+                    "Cabeca"
+                )
+            or Character:
+                FindFirstChild(
+                    "Head"
+                )
+            or Character:
+                FindFirstChild(
+                    "Tronco"
+                )
+            or Root
+
+
+        if not Target then
+
+            Data.LastVisibility =
+                false
+
+            return false
+
+        end
+
+
+        -----------------------------------------------------
+        -- IGNORE
+        -----------------------------------------------------
+
+        local Ignore =
+            {
+                Camera
+            }
+
+
+        if LocalPlayer.Character then
+
+            table.insert(
+                Ignore,
+                LocalPlayer.Character
+            )
+
+        end
+
+
+        if LocalEntity then
+
+            table.insert(
+                Ignore,
+                LocalEntity
+            )
+
+        end
+
+
+        VisibilityParams.FilterDescendantsInstances =
+            Ignore
+
+
+        -----------------------------------------------------
+        -- RAYCAST
+        -----------------------------------------------------
+
+        local Origin =
+            Camera.CFrame.Position
+
+
+        local Direction =
+            Target.Position
+            - Origin
+
+
+        local Result =
+            Workspace:
+                Raycast(
+                    Origin,
+                    Direction,
+                    VisibilityParams
+                )
+
+
+        local Visible =
+            false
+
+
+        if not Result then
+
+            Visible =
+                true
+
+        elseif
+            Result.Instance
+            and Result.Instance:
+                IsDescendantOf(
+                    Character
+                )
+        then
+
+            Visible =
+                true
+
+        end
+
+
+        Data.LastVisibility =
+            Visible
+
+
+        return Visible
 
     end
 
@@ -847,14 +1286,6 @@ function ESP.Init(Config)
             Part.Size / 2
 
 
-        local PartCFrame =
-            Part.CFrame
-
-
-        -----------------------------------------------------
-        -- 8 CORNERS
-        -----------------------------------------------------
-
         local X =
             Half.X
 
@@ -863,6 +1294,10 @@ function ESP.Init(Config)
 
         local Z =
             Half.Z
+
+
+        local PartCFrame =
+            Part.CFrame
 
 
         local Corners = {
@@ -887,7 +1322,9 @@ function ESP.Init(Config)
             local WorldPosition =
                 PartCFrame:
                     PointToWorldSpace(
-                        Corners[Index]
+                        Corners[
+                            Index
+                        ]
                     )
 
 
@@ -907,48 +1344,32 @@ function ESP.Init(Config)
                     true
 
 
-                if
-                    ScreenPosition.X
-                    < Bounds.MinX
-                then
-
-                    Bounds.MinX =
+                Bounds.MinX =
+                    math.min(
+                        Bounds.MinX,
                         ScreenPosition.X
+                    )
 
-                end
 
-
-                if
-                    ScreenPosition.Y
-                    < Bounds.MinY
-                then
-
-                    Bounds.MinY =
+                Bounds.MinY =
+                    math.min(
+                        Bounds.MinY,
                         ScreenPosition.Y
+                    )
 
-                end
 
-
-                if
-                    ScreenPosition.X
-                    > Bounds.MaxX
-                then
-
-                    Bounds.MaxX =
+                Bounds.MaxX =
+                    math.max(
+                        Bounds.MaxX,
                         ScreenPosition.X
+                    )
 
-                end
 
-
-                if
-                    ScreenPosition.Y
-                    > Bounds.MaxY
-                then
-
-                    Bounds.MaxY =
+                Bounds.MaxY =
+                    math.max(
+                        Bounds.MaxY,
                         ScreenPosition.Y
-
-                end
+                    )
 
             end
 
@@ -958,7 +1379,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- CHARACTER SCREEN BOUNDS
+    -- CHARACTER BOUNDS
     ---------------------------------------------------------
 
     local function GetCharacterBounds(
@@ -968,7 +1389,7 @@ function ESP.Init(Config)
     )
 
         -----------------------------------------------------
-        -- ROOT MUST BE IN FRONT
+        -- ROOT IN FRONT OF CAMERA
         -----------------------------------------------------
 
         local RootScreen =
@@ -1009,7 +1430,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- CACHED PARTS
+        -- CACHED BODY PARTS
         -----------------------------------------------------
 
         for Part
@@ -1054,7 +1475,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- VIEWPORT CHECK
+        -- VIEWPORT
         -----------------------------------------------------
 
         local Viewport =
@@ -1095,14 +1516,18 @@ function ESP.Init(Config)
 
 
         local Width =
-            Bounds.MaxX
-            - Bounds.MinX
+            (
+                Bounds.MaxX
+                - Bounds.MinX
+            )
             + Padding * 2
 
 
         local Height =
-            Bounds.MaxY
-            - Bounds.MinY
+            (
+                Bounds.MaxY
+                - Bounds.MinY
+            )
             + Padding * 2
 
 
@@ -1134,7 +1559,216 @@ function ESP.Init(Config)
                 X
                 + Width / 2,
 
+            CenterY =
+                Y
+                + Height / 2,
+
         }
+
+    end
+
+
+    ---------------------------------------------------------
+    -- CORNER BOX
+    ---------------------------------------------------------
+
+    local function UpdateCornerBox(
+        Visuals,
+        Width,
+        Height,
+        Color
+    )
+
+        local Thickness =
+            math.max(
+                1,
+
+                tonumber(
+                    Settings.BoxThickness
+                )
+                or 1
+            )
+
+
+        local Ratio =
+            tonumber(
+                Settings.CornerRatio
+            )
+            or 0.25
+
+
+        Ratio =
+            math.clamp(
+                Ratio,
+                0.05,
+                0.50
+            )
+
+
+        local Corner =
+            math.max(
+                5,
+
+                math.floor(
+                    math.min(
+                        Width,
+                        Height
+                    )
+                    * Ratio
+                )
+            )
+
+
+        Corner =
+            math.min(
+                Corner,
+                Width / 2,
+                Height / 2
+            )
+
+
+        local C =
+            Visuals.Corners
+
+
+        for _, Line
+            in ipairs(
+                C
+            )
+        do
+
+            Line.BackgroundColor3 =
+                Color
+
+        end
+
+
+        -----------------------------------------------------
+        -- TOP LEFT
+        -----------------------------------------------------
+
+        C[1].Position =
+            UDim2.fromOffset(
+                0,
+                0
+            )
+
+
+        C[1].Size =
+            UDim2.fromOffset(
+                Corner,
+                Thickness
+            )
+
+
+        C[2].Position =
+            UDim2.fromOffset(
+                0,
+                0
+            )
+
+
+        C[2].Size =
+            UDim2.fromOffset(
+                Thickness,
+                Corner
+            )
+
+
+        -----------------------------------------------------
+        -- TOP RIGHT
+        -----------------------------------------------------
+
+        C[3].Position =
+            UDim2.fromOffset(
+                Width - Corner,
+                0
+            )
+
+
+        C[3].Size =
+            UDim2.fromOffset(
+                Corner,
+                Thickness
+            )
+
+
+        C[4].Position =
+            UDim2.fromOffset(
+                Width - Thickness,
+                0
+            )
+
+
+        C[4].Size =
+            UDim2.fromOffset(
+                Thickness,
+                Corner
+            )
+
+
+        -----------------------------------------------------
+        -- BOTTOM LEFT
+        -----------------------------------------------------
+
+        C[5].Position =
+            UDim2.fromOffset(
+                0,
+                Height - Thickness
+            )
+
+
+        C[5].Size =
+            UDim2.fromOffset(
+                Corner,
+                Thickness
+            )
+
+
+        C[6].Position =
+            UDim2.fromOffset(
+                0,
+                Height - Corner
+            )
+
+
+        C[6].Size =
+            UDim2.fromOffset(
+                Thickness,
+                Corner
+            )
+
+
+        -----------------------------------------------------
+        -- BOTTOM RIGHT
+        -----------------------------------------------------
+
+        C[7].Position =
+            UDim2.fromOffset(
+                Width - Corner,
+                Height - Thickness
+            )
+
+
+        C[7].Size =
+            UDim2.fromOffset(
+                Corner,
+                Thickness
+            )
+
+
+        C[8].Position =
+            UDim2.fromOffset(
+                Width - Thickness,
+                Height - Corner
+            )
+
+
+        C[8].Size =
+            UDim2.fromOffset(
+                Thickness,
+                Corner
+            )
 
     end
 
@@ -1149,7 +1783,7 @@ function ESP.Init(Config)
     )
 
         -----------------------------------------------------
-        -- MASTER TOGGLE
+        -- MASTER
         -----------------------------------------------------
 
         if
@@ -1173,13 +1807,88 @@ function ESP.Init(Config)
             not Character.Parent
         then
 
+            HideEntity(
+                Data
+            )
+
             return
 
         end
 
 
         -----------------------------------------------------
-        -- ROOT
+        -- LOCAL ENTITY SAFETY
+        -----------------------------------------------------
+
+        if
+            IsLocalEntity(
+                Character
+            )
+        then
+
+            LocalEntity =
+                Character
+
+
+            HideEntity(
+                Data
+            )
+
+
+            return
+
+        end
+
+
+        -----------------------------------------------------
+        -- PLAYER
+        -----------------------------------------------------
+
+        local Player =
+            ResolvePlayer(
+                Character
+            )
+
+
+        -----------------------------------------------------
+        -- PLAYERS ONLY
+        -----------------------------------------------------
+
+        if
+            Settings.PlayersOnly
+            and not Player
+        then
+
+            HideEntity(
+                Data
+            )
+
+            return
+
+        end
+
+
+        -----------------------------------------------------
+        -- TEAM CHECK
+        -----------------------------------------------------
+
+        if
+            IsTeammate(
+                Character
+            )
+        then
+
+            HideEntity(
+                Data
+            )
+
+            return
+
+        end
+
+
+        -----------------------------------------------------
+        -- ROOT / HUMANOID
         -----------------------------------------------------
 
         local Root =
@@ -1188,10 +1897,6 @@ function ESP.Init(Config)
                     "HumanoidRootPart"
                 )
 
-
-        -----------------------------------------------------
-        -- HUMANOID
-        -----------------------------------------------------
 
         local Humanoid =
             Character:
@@ -1270,16 +1975,74 @@ function ESP.Init(Config)
         end
 
 
+        -----------------------------------------------------
+        -- VISIBILITY
+        -----------------------------------------------------
+
+        local Visible =
+            IsEntityVisible(
+                Data,
+                Camera,
+                Root
+            )
+
+
+        -----------------------------------------------------
+        -- BOX COLOR
+        -----------------------------------------------------
+
+        local BoxColor
+
+
+        if
+            Settings.VisibilityCheck
+        then
+
+            if Visible then
+
+                BoxColor =
+                    Settings.VisibleColor
+                    or Color3.fromRGB(
+                        90,
+                        255,
+                        130
+                    )
+
+            else
+
+                BoxColor =
+                    Settings.HiddenColor
+                    or Color3.fromRGB(
+                        255,
+                        90,
+                        90
+                    )
+
+            end
+
+        else
+
+            BoxColor =
+                Settings.BoxColor
+                or Color3.new(
+                    1,
+                    1,
+                    1
+                )
+
+        end
+
+
+        -----------------------------------------------------
+        -- VISUAL DATA
+        -----------------------------------------------------
+
         local Visuals =
             Data.Visuals
 
 
-        -----------------------------------------------------
-        -- APPEARANCE
-        -----------------------------------------------------
-
         Visuals.Stroke.Color =
-            Settings.BoxColor
+            BoxColor
 
 
         Visuals.Stroke.Thickness =
@@ -1289,21 +2052,21 @@ function ESP.Init(Config)
             or 1
 
 
-        Visuals.Name.TextColor3 =
-            Settings.TextColor
-
-
-        Visuals.Health.TextColor3 =
-            Settings.TextColor
-
-
-        Visuals.Distance.TextColor3 =
-            Settings.TextColor
-
-
         -----------------------------------------------------
-        -- BOX
+        -- BOX POSITION
         -----------------------------------------------------
+
+        local BoxWidth =
+            math.floor(
+                Bounds.Width
+            )
+
+
+        local BoxHeight =
+            math.floor(
+                Bounds.Height
+            )
+
 
         Visuals.Box.Position =
             UDim2.fromOffset(
@@ -1319,35 +2082,112 @@ function ESP.Init(Config)
 
         Visuals.Box.Size =
             UDim2.fromOffset(
-                math.floor(
-                    Bounds.Width
-                ),
-
-                math.floor(
-                    Bounds.Height
-                )
+                BoxWidth,
+                BoxHeight
             )
 
 
-        Visuals.Box.Visible =
+        -----------------------------------------------------
+        -- BOX STYLE
+        -----------------------------------------------------
+
+        local BoxEnabled =
             Settings.Box
             == true
 
 
+        local BoxStyle =
+            Settings.BoxStyle
+            or "Corner"
+
+
+        local CornerStyle =
+            BoxStyle
+            == "Corner"
+
+
+        Visuals.Box.Visible =
+            BoxEnabled
+
+
+        Visuals.Stroke.Enabled =
+            BoxEnabled
+            and not CornerStyle
+
+
+        for _, Line
+            in ipairs(
+                Visuals.Corners
+            )
+        do
+
+            Line.Visible =
+                BoxEnabled
+                and CornerStyle
+
+        end
+
+
+        if
+            BoxEnabled
+            and CornerStyle
+        then
+
+            UpdateCornerBox(
+                Visuals,
+                BoxWidth,
+                BoxHeight,
+                BoxColor
+            )
+
+        end
+
+
         -----------------------------------------------------
-        -- PLAYER NAME
+        -- TEXT COLORS
         -----------------------------------------------------
 
-        local Player =
-            ResolvePlayer(
-                Character
+        local TextColor =
+            Settings.TextColor
+            or Color3.new(
+                1,
+                1,
+                1
             )
 
 
-        local DisplayName =
-            Player
-            and Player.Name
-            or Character.Name
+        Visuals.Name.TextColor3 =
+            TextColor
+
+
+        Visuals.Distance.TextColor3 =
+            TextColor
+
+
+        Visuals.Health.TextColor3 =
+            GetHealthColor(
+                Humanoid
+            )
+
+
+        -----------------------------------------------------
+        -- NAME
+        -----------------------------------------------------
+
+        local DisplayName
+
+
+        if Player then
+
+            DisplayName =
+                Player.Name
+
+        else
+
+            DisplayName =
+                Character.Name
+
+        end
 
 
         Visuals.Name.Text =
@@ -1400,7 +2240,7 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- DISTANCE TEXT
+        -- DISTANCE
         -----------------------------------------------------
 
         Visuals.Distance.Text =
@@ -1428,7 +2268,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- REGISTER EXISTING ENTITIES
+    -- REGISTER EXISTING
     ---------------------------------------------------------
 
     for _, Character
@@ -1453,9 +2293,20 @@ function ESP.Init(Config)
         EntitiesFolder.ChildAdded:
             Connect(function(Character)
 
-                RegisterEntity(
-                    Character
-                )
+                task.defer(function()
+
+                    if
+                        Character.Parent
+                        == EntitiesFolder
+                    then
+
+                        RegisterEntity(
+                            Character
+                        )
+
+                    end
+
+                end)
 
             end)
 
@@ -1468,6 +2319,17 @@ function ESP.Init(Config)
         EntitiesFolder.ChildRemoved:
             Connect(function(Character)
 
+                if
+                    Character
+                    == LocalEntity
+                then
+
+                    LocalEntity =
+                        nil
+
+                end
+
+
                 UnregisterEntity(
                     Character
                 )
@@ -1476,12 +2338,14 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- RENDER LOOP
+    -- RENDER
     ---------------------------------------------------------
 
     Connections.Render =
         RunService.RenderStepped:
-            Connect(function(DeltaTime)
+            Connect(function(
+                DeltaTime
+            )
 
                 if Destroyed then
                     return
@@ -1503,8 +2367,13 @@ function ESP.Init(Config)
 
 
                 UpdateAccumulator =
-                    0
+                    UpdateAccumulator
+                    - UPDATE_RATE
 
+
+                -------------------------------------------------
+                -- CAMERA
+                -------------------------------------------------
 
                 local Camera =
                     Workspace.CurrentCamera
@@ -1516,7 +2385,7 @@ function ESP.Init(Config)
 
 
                 -------------------------------------------------
-                -- MASTER DISABLED
+                -- ESP DISABLED
                 -------------------------------------------------
 
                 if
@@ -1542,8 +2411,12 @@ function ESP.Init(Config)
 
 
                 -------------------------------------------------
-                -- UPDATE
+                -- UPDATE ENTITIES
                 -------------------------------------------------
+
+                local RemoveQueue =
+                    {}
+
 
                 for Character,
                     Data
@@ -1564,11 +2437,29 @@ function ESP.Init(Config)
 
                     else
 
-                        UnregisterEntity(
+                        table.insert(
+                            RemoveQueue,
                             Character
                         )
 
                     end
+
+                end
+
+
+                -------------------------------------------------
+                -- CLEAN STALE ENTITIES
+                -------------------------------------------------
+
+                for _, Character
+                    in ipairs(
+                        RemoveQueue
+                    )
+                do
+
+                    UnregisterEntity(
+                        Character
+                    )
 
                 end
 
@@ -1583,6 +2474,10 @@ function ESP.Init(Config)
         {}
 
 
+    ---------------------------------------------------------
+    -- TOGGLE
+    ---------------------------------------------------------
+
     function Controller.Toggle(
         Value
     )
@@ -1594,7 +2489,7 @@ function ESP.Init(Config)
 
 
     ---------------------------------------------------------
-    -- DEBUG API
+    -- ENTITY COUNT
     ---------------------------------------------------------
 
     function Controller.GetEntityCount()
@@ -1615,6 +2510,18 @@ function ESP.Init(Config)
 
 
         return Count
+
+    end
+
+
+    ---------------------------------------------------------
+    -- GET LOCAL ENTITY
+    ---------------------------------------------------------
+
+    function Controller.GetLocalEntity()
+
+        return
+            LocalEntity
 
     end
 
@@ -1646,8 +2553,12 @@ function ESP.Init(Config)
 
             if Connection then
 
-                Connection:
-                    Disconnect()
+                pcall(function()
+
+                    Connection:
+                        Disconnect()
+
+                end)
 
             end
 
@@ -1660,10 +2571,10 @@ function ESP.Init(Config)
 
 
         -----------------------------------------------------
-        -- ENTITIES
+        -- ENTITY LIST
         -----------------------------------------------------
 
-        local ToRemove =
+        local RemoveQueue =
             {}
 
 
@@ -1674,7 +2585,7 @@ function ESP.Init(Config)
         do
 
             table.insert(
-                ToRemove,
+                RemoveQueue,
                 Character
             )
 
@@ -1683,7 +2594,7 @@ function ESP.Init(Config)
 
         for _, Character
             in ipairs(
-                ToRemove
+                RemoveQueue
             )
         do
 
@@ -1700,8 +2611,12 @@ function ESP.Init(Config)
 
         if ScreenGui then
 
-            ScreenGui:
-                Destroy()
+            pcall(function()
+
+                ScreenGui:
+                    Destroy()
+
+            end)
 
         end
 
