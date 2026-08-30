@@ -130,7 +130,10 @@ assert(
 -- INIT
 ---------------------------------------------------------
 
-local ESP = nil
+local ESP =
+    ESPModule.Init(
+        Config
+    )
 
 
 local UI =
