@@ -131,15 +131,105 @@ assert(
 ---------------------------------------------------------
 
 local ESP =
-    ESPModule.Init(
-        Config
-    )
+    nil
 
 
 local UI =
-    UIModule.Init(
-        Config
+    nil
+
+
+local function CleanupController(
+    Controller
+)
+
+    if
+        Controller
+        and type(Controller.Destroy) == "function"
+    then
+
+        pcall(
+            Controller.Destroy
+        )
+
+    end
+
+end
+
+
+local function FormatInitError(
+    InitError
+)
+
+    if
+        debug
+        and type(debug.traceback) == "function"
+    then
+
+        return debug.traceback(
+            tostring(InitError),
+            2
+        )
+
+    end
+
+
+    return tostring(
+        InitError
     )
+
+end
+
+
+local InitSuccess,
+    InitError =
+        xpcall(function()
+
+            ESP =
+                ESPModule.Init(
+                    Config
+                )
+
+
+            assert(
+                type(ESP) == "table",
+                "ESP.Init nao retornou um controller"
+            )
+
+
+            UI =
+                UIModule.Init(
+                    Config
+                )
+
+
+            assert(
+                type(UI) == "table",
+                "UI.Init nao retornou um controller"
+            )
+
+        end,
+        FormatInitError)
+
+
+if not InitSuccess then
+
+    CleanupController(
+        UI
+    )
+
+
+    CleanupController(
+        ESP
+    )
+
+
+    error(
+        "Falha ao inicializar newz:\n"
+        .. tostring(InitError),
+        0
+    )
+
+end
 
 
 ---------------------------------------------------------
@@ -147,6 +237,10 @@ local UI =
 ---------------------------------------------------------
 
 local Project = {}
+
+
+local ProjectDestroyed =
+    false
 
 
 Project.Config =
@@ -167,26 +261,39 @@ Project.UI =
 
 function Project.Destroy()
 
-    if UI
-        and type(UI.Destroy) == "function"
-    then
-
-        pcall(
-            UI.Destroy
-        )
-
+    if ProjectDestroyed then
+        return
     end
 
 
-    if ESP
-        and type(ESP.Destroy) == "function"
-    then
+    ProjectDestroyed =
+        true
 
-        pcall(
-            ESP.Destroy
-        )
 
-    end
+    CleanupController(
+        UI
+    )
+
+
+    CleanupController(
+        ESP
+    )
+
+
+    UI =
+        nil
+
+
+    ESP =
+        nil
+
+
+    Project.UI =
+        nil
+
+
+    Project.ESP =
+        nil
 
 
     if

@@ -5,6 +5,13 @@ Config.Project = {
     Version = "0.1.0",
 }
 
+Config.Runtime = {
+    EntitiesFolder = "Players",
+    EntityFolderTimeout = 15,
+    UpdateFrequency = 30,
+    VisibilityInterval = 0.10,
+}
+
 Config.UI = {
     Keybind = "LeftAlt",
 

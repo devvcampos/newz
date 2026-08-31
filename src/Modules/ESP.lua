@@ -24,14 +24,53 @@ function ESP.Init(Config)
         Config.ESP
 
 
+    local Runtime =
+        Config.Runtime
+        or {}
+
+
+    assert(
+        LocalPlayer,
+        "ESP precisa ser inicializado no cliente"
+    )
+
+
     ---------------------------------------------------------
     -- ENTITY FOLDER
     ---------------------------------------------------------
 
+    local EntitiesFolderName =
+        tostring(
+            Runtime.EntitiesFolder
+            or "Players"
+        )
+
+
+    local EntityFolderTimeout =
+        math.max(
+            0,
+            tonumber(
+                Runtime.EntityFolderTimeout
+            )
+            or 15
+        )
+
+
     local EntitiesFolder =
         Workspace:WaitForChild(
-            "Players"
+            EntitiesFolderName,
+            EntityFolderTimeout
         )
+
+
+    assert(
+        EntitiesFolder,
+        string.format(
+            "Workspace.%s nao encontrado em %.1f segundos",
+            EntitiesFolderName,
+            EntityFolderTimeout
+        )
+    )
 
 
     ---------------------------------------------------------
@@ -58,8 +97,29 @@ function ESP.Init(Config)
     -- PERFORMANCE
     ---------------------------------------------------------
 
+    local UpdateFrequency =
+        math.clamp(
+            tonumber(
+                Runtime.UpdateFrequency
+            )
+            or 30,
+            1,
+            240
+        )
+
+
     local UPDATE_RATE =
-        1 / 30
+        1 / UpdateFrequency
+
+
+    local VISIBILITY_INTERVAL =
+        math.max(
+            0.01,
+            tonumber(
+                Runtime.VisibilityInterval
+            )
+            or 0.10
+        )
 
 
     local UpdateAccumulator =
@@ -487,6 +547,23 @@ function ESP.Init(Config)
     )
 
         -----------------------------------------------------
+        -- DIRECT CHARACTER REFERENCE
+        -----------------------------------------------------
+
+        local DirectPlayer =
+            Players:
+                GetPlayerFromCharacter(
+                    Character
+                )
+
+
+        if DirectPlayer then
+
+            return DirectPlayer
+
+        end
+
+        -----------------------------------------------------
         -- USERID ATTRIBUTE
         -----------------------------------------------------
 
@@ -553,29 +630,6 @@ function ESP.Init(Config)
         end
 
 
-        -----------------------------------------------------
-        -- DISPLAY NAME
-        -----------------------------------------------------
-
-        for _, OtherPlayer
-            in ipairs(
-                Players:
-                    GetPlayers()
-            )
-        do
-
-            if
-                OtherPlayer.DisplayName
-                == Character.Name
-            then
-
-                return OtherPlayer
-
-            end
-
-        end
-
-
         return nil
 
     end
@@ -592,26 +646,6 @@ function ESP.Init(Config)
         if
             LocalPlayer.Character
             == Character
-        then
-
-            return true
-
-        end
-
-
-        if
-            Character.Name
-            == LocalPlayer.Name
-        then
-
-            return true
-
-        end
-
-
-        if
-            Character.Name
-            == LocalPlayer.DisplayName
         then
 
             return true
@@ -1133,7 +1167,7 @@ function ESP.Init(Config)
         if
             Now
             - Data.LastVisibilityCheck
-            < 0.10
+            < VISIBILITY_INTERVAL
         then
 
             return
@@ -2367,7 +2401,7 @@ end
 
                 UpdateAccumulator =
                     UpdateAccumulator
-                    - UPDATE_RATE
+                    % UPDATE_RATE
 
 
                 -------------------------------------------------
