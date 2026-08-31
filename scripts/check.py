@@ -19,6 +19,7 @@ REQUIRED = [
 
     ROOT / "src" / "Modules" / "PlayerESP.lua",
     ROOT / "src" / "Modules" / "CorpseESP.lua",
+    ROOT / "src" / "Modules" / "LootESP.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
 
     ROOT / "vendor" / "NeverLose.lua",

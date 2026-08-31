@@ -22,13 +22,16 @@ function CorpseESP.Init(Config, Dependencies)
     local Bounds = Dependencies.Bounds
     local Visuals = Dependencies.Visuals
     local SchedulerModule = Dependencies.SchedulerModule
+    local LootModule = Dependencies.LootModule
     local Profiler = Dependencies.Profiler
 
     assert(
         Bounds
         and Visuals
         and SchedulerModule
-        and type(SchedulerModule.New) == "function",
+        and type(SchedulerModule.New) == "function"
+        and LootModule
+        and type(LootModule.New) == "function",
         "Dependencias invalidas em CorpseESP"
     )
 
@@ -63,6 +66,44 @@ function CorpseESP.Init(Config, Dependencies)
             UpdateFrequency
         )
 
+    local Loot =
+        LootModule.New(
+            Config,
+            {
+                Profiler = Profiler,
+            }
+        )
+
+    ---------------------------------------------------------
+    -- HOT-PATH BINDINGS
+    ---------------------------------------------------------
+
+    local BoundsCreateState = Bounds.CreateState
+    local BoundsAddBodyPart = Bounds.AddBodyPart
+    local BoundsRemoveBodyPart = Bounds.RemoveBodyPart
+    local BoundsFindCorpseRoot = Bounds.FindCorpseRoot
+    local BoundsGetCharacterBounds = Bounds.GetCharacterBounds
+
+    local VisualCreate = Visuals.Create
+    local VisualHide = Visuals.Hide
+    local VisualDestroyEntity = Visuals.DestroyEntity
+    local VisualUpdateBox = Visuals.UpdateBox
+    local VisualSetVisible = Visuals.SetVisible
+    local VisualSetText = Visuals.SetText
+    local VisualSetTextColor = Visuals.SetTextColor
+
+    local SchedulerAdd = Scheduler.Add
+    local SchedulerRemove = Scheduler.Remove
+    local SchedulerStep = Scheduler.Step
+    local SchedulerResetTiming = Scheduler.ResetTiming
+    local SchedulerGetCount = Scheduler.GetCount
+    local SchedulerDestroy = Scheduler.Destroy
+
+    local LootPrepare = Loot.Prepare
+    local LootSync = Loot.Sync
+    local LootSuspend = Loot.Suspend
+    local LootDestroyData = Loot.DestroyData
+
     local Destroyed = false
     local WasEnabled = false
 
@@ -78,6 +119,16 @@ function CorpseESP.Init(Config, Dependencies)
                 Connection
             )
         end
+    end
+
+    local function HideCorpse(Data)
+        VisualHide(
+            Data
+        )
+
+        LootSuspend(
+            Data
+        )
     end
 
     ---------------------------------------------------------
@@ -115,7 +166,7 @@ function CorpseESP.Init(Config, Dependencies)
             Corpse = Corpse,
 
             Root =
-                Bounds.FindCorpseRoot(
+                BoundsFindCorpseRoot(
                     Corpse
                 ),
 
@@ -127,7 +178,7 @@ function CorpseESP.Init(Config, Dependencies)
             BodyParts = {},
             Connections = {},
 
-            Bounds = Bounds.CreateState(),
+            Bounds = BoundsCreateState(),
             RenderState = {},
             Hidden = false,
 
@@ -136,11 +187,12 @@ function CorpseESP.Init(Config, Dependencies)
         }
 
         Data.Visuals =
-            Visuals.Create(
+            VisualCreate(
                 "CORPSE_" .. Corpse.Name,
                 {
                     "Name",
                     "Distance",
+                    "Loot",
                 },
                 CorpseColor,
                 TextColor
@@ -150,11 +202,34 @@ function CorpseESP.Init(Config, Dependencies)
             "[CORPSE] "
             .. Corpse.Name
 
+        local LootLabel =
+            Data.Visuals.Labels.Loot
+
+        LootLabel.AnchorPoint =
+            Vector2.new(
+                0.5,
+                0
+            )
+
+        LootLabel.TextYAlignment =
+            Enum.TextYAlignment.Top
+
+        LootLabel.Size =
+            UDim2.fromOffset(
+                280,
+                18
+            )
+
+        LootPrepare(
+            Data,
+            Corpse
+        )
+
         CorpseEntities[Corpse] = Data
-        Scheduler.Add(Data)
+        SchedulerAdd(Data)
 
         for _, Object in ipairs(Corpse:GetDescendants()) do
-            Bounds.AddBodyPart(
+            BoundsAddBodyPart(
                 Data,
                 Object
             )
@@ -162,7 +237,7 @@ function CorpseESP.Init(Config, Dependencies)
 
         Data.Connections.DescendantAdded =
             Corpse.DescendantAdded:Connect(function(Object)
-                Bounds.AddBodyPart(
+                BoundsAddBodyPart(
                     Data,
                     Object
                 )
@@ -174,7 +249,7 @@ function CorpseESP.Init(Config, Dependencies)
                     Data.Root = Object
                 elseif not Data.Root then
                     Data.Root =
-                        Bounds.FindCorpseRoot(
+                        BoundsFindCorpseRoot(
                             Corpse
                         )
                 end
@@ -182,7 +257,7 @@ function CorpseESP.Init(Config, Dependencies)
 
         Data.Connections.DescendantRemoving =
             Corpse.DescendantRemoving:Connect(function(Object)
-                Bounds.RemoveBodyPart(
+                BoundsRemoveBodyPart(
                     Data,
                     Object
                 )
@@ -193,7 +268,7 @@ function CorpseESP.Init(Config, Dependencies)
                     task.defer(function()
                         if Corpse.Parent then
                             Data.Root =
-                                Bounds.FindCorpseRoot(
+                                BoundsFindCorpseRoot(
                                     Corpse
                                 )
                         end
@@ -201,7 +276,7 @@ function CorpseESP.Init(Config, Dependencies)
                 end
             end)
 
-        Visuals.Hide(Data)
+        VisualHide(Data)
     end
 
     local function UnregisterCorpse(Corpse)
@@ -212,7 +287,7 @@ function CorpseESP.Init(Config, Dependencies)
             return
         end
 
-        Scheduler.Remove(Data)
+        SchedulerRemove(Data)
 
         for _, Connection in pairs(Data.Connections) do
             DisconnectConnection(Connection)
@@ -220,7 +295,11 @@ function CorpseESP.Init(Config, Dependencies)
 
         table.clear(Data.Connections)
 
-        Visuals.DestroyEntity(Data)
+        LootDestroyData(
+            Data
+        )
+
+        VisualDestroyEntity(Data)
 
         CorpseEntities[Corpse] = nil
     end
@@ -289,7 +368,11 @@ function CorpseESP.Init(Config, Dependencies)
     -- UPDATE
     ---------------------------------------------------------
 
-    local function UpdateCorpse(Data, Camera)
+    local function UpdateCorpse(
+        Data,
+        Camera,
+        CameraPosition
+    )
         local Corpse = Data.Corpse
 
         if
@@ -300,7 +383,7 @@ function CorpseESP.Init(Config, Dependencies)
                 and Corpse.Parent ~= CorpseFolder
             )
         then
-            Visuals.Hide(Data)
+            HideCorpse(Data)
             return
         end
 
@@ -311,7 +394,7 @@ function CorpseESP.Init(Config, Dependencies)
             or not Root.Parent
         then
             Root =
-                Bounds.FindCorpseRoot(
+                BoundsFindCorpseRoot(
                     Corpse
                 )
 
@@ -319,14 +402,14 @@ function CorpseESP.Init(Config, Dependencies)
         end
 
         if not Root then
-            Visuals.Hide(Data)
+            HideCorpse(Data)
             return
         end
 
         local Distance =
             (
                 Root.Position
-                - Camera.CFrame.Position
+                - CameraPosition
             ).Magnitude
 
         local MaxDistance =
@@ -334,7 +417,7 @@ function CorpseESP.Init(Config, Dependencies)
             or 1000
 
         if Distance > MaxDistance then
-            Visuals.Hide(Data)
+            HideCorpse(Data)
             return
         end
 
@@ -344,7 +427,7 @@ function CorpseESP.Init(Config, Dependencies)
             )
 
         local CharacterBounds =
-            Bounds.GetCharacterBounds(
+            BoundsGetCharacterBounds(
                 Data,
                 Camera,
                 Root,
@@ -357,8 +440,25 @@ function CorpseESP.Init(Config, Dependencies)
         )
 
         if not CharacterBounds then
-            Visuals.Hide(Data)
+            HideCorpse(Data)
             return
+        end
+
+        local LootText = ""
+        local LootLineCount = 0
+
+        if
+            Settings.Loot == true
+            or (
+                Data.Loot
+                and Data.Loot.Active
+            )
+        then
+            LootText,
+                LootLineCount =
+                    LootSync(
+                        Data
+                    )
         end
 
         local VisualStart =
@@ -401,7 +501,7 @@ function CorpseESP.Init(Config, Dependencies)
                 255
             )
 
-        Visuals.UpdateBox(
+        VisualUpdateBox(
             Data,
             CharacterBounds,
             Settings,
@@ -411,24 +511,31 @@ function CorpseESP.Init(Config, Dependencies)
         local Labels = Data.Visuals.Labels
         local State = Data.RenderState
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "NameColor",
             Labels.Name,
             TextColor
         )
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "DistanceColor",
             Labels.Distance,
             TextColor
         )
 
+        VisualSetTextColor(
+            State,
+            "LootColor",
+            Labels.Loot,
+            TextColor
+        )
+
         local ShowName =
             Settings.Name == true
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "NameVisible",
             Labels.Name,
@@ -443,10 +550,15 @@ function CorpseESP.Init(Config, Dependencies)
                 )
         end
 
+        local NextY =
+            CharacterBounds.Y
+            + CharacterBounds.Height
+            + 10
+
         local ShowDistance =
             Settings.Distance == true
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "DistanceVisible",
             Labels.Distance,
@@ -454,7 +566,7 @@ function CorpseESP.Init(Config, Dependencies)
         )
 
         if ShowDistance then
-            Visuals.SetText(
+            VisualSetText(
                 State,
                 "DistanceText",
                 Labels.Distance,
@@ -464,9 +576,55 @@ function CorpseESP.Init(Config, Dependencies)
             Labels.Distance.Position =
                 UDim2.fromOffset(
                     CharacterBounds.CenterX,
-                    CharacterBounds.Y
-                    + CharacterBounds.Height
-                    + 10
+                    NextY
+                )
+
+            NextY += 17
+        end
+
+        local ShowLoot =
+            Settings.Loot == true
+            and LootText ~= ""
+
+        VisualSetVisible(
+            State,
+            "LootVisible",
+            Labels.Loot,
+            ShowLoot
+        )
+
+        if ShowLoot then
+            VisualSetText(
+                State,
+                "LootText",
+                Labels.Loot,
+                LootText
+            )
+
+            local LootHeight =
+                math.max(
+                    18,
+                    LootLineCount * 16
+                )
+
+            if
+                State.LootHeight
+                ~= LootHeight
+            then
+                Labels.Loot.Size =
+                    UDim2.fromOffset(
+                        280,
+                        LootHeight
+                    )
+
+                State.LootHeight =
+                    LootHeight
+            end
+
+            Labels.Loot.Position =
+                UDim2.fromOffset(
+                    CharacterBounds.CenterX,
+                    NextY
                 )
         end
 
@@ -512,6 +670,31 @@ function CorpseESP.Init(Config, Dependencies)
         end)
 
     ---------------------------------------------------------
+    -- SCHEDULED HOT PATH
+    ---------------------------------------------------------
+
+    local ActiveCamera = nil
+    local ActiveCameraPosition = nil
+
+    local function ProcessScheduledCorpse(Data)
+        local UpdateStart =
+            ProfileBegin(
+                "Corpses.Update"
+            )
+
+        UpdateCorpse(
+            Data,
+            ActiveCamera,
+            ActiveCameraPosition
+        )
+
+        ProfileFinish(
+            "Corpses.Update",
+            UpdateStart
+        )
+    end
+
+    ---------------------------------------------------------
     -- CONTROLLER
     ---------------------------------------------------------
 
@@ -525,10 +708,10 @@ function CorpseESP.Init(Config, Dependencies)
         if Settings.Enabled ~= true then
             if WasEnabled then
                 for _, Data in pairs(CorpseEntities) do
-                    Visuals.Hide(Data)
+                    HideCorpse(Data)
                 end
 
-                Scheduler.ResetTiming()
+                SchedulerResetTiming()
                 WasEnabled = false
             end
 
@@ -541,26 +724,20 @@ function CorpseESP.Init(Config, Dependencies)
             return 0
         end
 
+        ActiveCamera =
+            Camera
+
+        ActiveCameraPosition =
+            Camera.CFrame.Position
+
         local Budget =
-            Scheduler.Step(
+            SchedulerStep(
                 DeltaTime,
-                function(Data)
-                    local UpdateStart =
-                        ProfileBegin(
-                            "Corpses.Update"
-                        )
-
-                    UpdateCorpse(
-                        Data,
-                        Camera
-                    )
-
-                    ProfileFinish(
-                        "Corpses.Update",
-                        UpdateStart
-                    )
-                end
+                ProcessScheduledCorpse
             )
+
+        ActiveCamera = nil
+        ActiveCameraPosition = nil
 
         if Budget > 0 then
             ProfileCount(
@@ -573,7 +750,7 @@ function CorpseESP.Init(Config, Dependencies)
     end
 
     function Controller.GetCount()
-        return Scheduler.GetCount()
+        return SchedulerGetCount()
     end
 
     function Controller.Destroy()
@@ -592,7 +769,7 @@ function CorpseESP.Init(Config, Dependencies)
         DisconnectCorpseFolder()
         table.clear(CorpseEntities)
 
-        Scheduler.Destroy()
+        SchedulerDestroy()
     end
 
     return Controller

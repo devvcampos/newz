@@ -82,49 +82,6 @@ function Bounds.New(Dependencies)
         return true
     end
 
-    local function AddFastProjectedCorner(
-        State,
-        CameraX,
-        CameraY,
-        CameraZ
-    )
-        local Depth = -CameraZ
-
-        if Depth <= 0.05 then
-            return
-        end
-
-        local ScreenX =
-            Projection.CenterX
-            + CameraX
-            * Projection.FocalX
-            / Depth
-
-        local ScreenY =
-            Projection.CenterY
-            - CameraY
-            * Projection.FocalY
-            / Depth
-
-        State.HasPoint = true
-
-        if ScreenX < State.MinX then
-            State.MinX = ScreenX
-        end
-
-        if ScreenY < State.MinY then
-            State.MinY = ScreenY
-        end
-
-        if ScreenX > State.MaxX then
-            State.MaxX = ScreenX
-        end
-
-        if ScreenY > State.MaxY then
-            State.MaxY = ScreenY
-        end
-    end
-
     local function AddLegacyProjectedCorner(
         Camera,
         State,
@@ -231,15 +188,148 @@ function Bounds.New(Dependencies)
         local ZY = R21 * Y
         local ZZ = R22 * Z
 
-        AddFastProjectedCorner(State, PX - XX - XY - XZ, PY - YX - YY - YZ, PZ - ZX - ZY - ZZ)
-        AddFastProjectedCorner(State, PX - XX - XY + XZ, PY - YX - YY + YZ, PZ - ZX - ZY + ZZ)
-        AddFastProjectedCorner(State, PX - XX + XY - XZ, PY - YX + YY - YZ, PZ - ZX + ZY - ZZ)
-        AddFastProjectedCorner(State, PX - XX + XY + XZ, PY - YX + YY + YZ, PZ - ZX + ZY + ZZ)
+        local CenterX = Projection.CenterX
+        local CenterY = Projection.CenterY
+        local FocalX = Projection.FocalX
+        local FocalY = Projection.FocalY
 
-        AddFastProjectedCorner(State, PX + XX - XY - XZ, PY + YX - YY - YZ, PZ + ZX - ZY - ZZ)
-        AddFastProjectedCorner(State, PX + XX - XY + XZ, PY + YX - YY + YZ, PZ + ZX - ZY + ZZ)
-        AddFastProjectedCorner(State, PX + XX + XY - XZ, PY + YX + YY - YZ, PZ + ZX + ZY - ZZ)
-        AddFastProjectedCorner(State, PX + XX + XY + XZ, PY + YX + YY + YZ, PZ + ZX + ZY + ZZ)
+        local MinX = State.MinX
+        local MinY = State.MinY
+        local MaxX = State.MaxX
+        local MaxY = State.MaxY
+        local HasPoint = State.HasPoint
+
+        local CameraX
+        local CameraY
+        local Depth
+        local ScreenX
+        local ScreenY
+
+        CameraX = PX - XX - XY - XZ
+        CameraY = PY - YX - YY - YZ
+        Depth = -(PZ - ZX - ZY - ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX - XX - XY + XZ
+        CameraY = PY - YX - YY + YZ
+        Depth = -(PZ - ZX - ZY + ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX - XX + XY - XZ
+        CameraY = PY - YX + YY - YZ
+        Depth = -(PZ - ZX + ZY - ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX - XX + XY + XZ
+        CameraY = PY - YX + YY + YZ
+        Depth = -(PZ - ZX + ZY + ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX + XX - XY - XZ
+        CameraY = PY + YX - YY - YZ
+        Depth = -(PZ + ZX - ZY - ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX + XX - XY + XZ
+        CameraY = PY + YX - YY + YZ
+        Depth = -(PZ + ZX - ZY + ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX + XX + XY - XZ
+        CameraY = PY + YX + YY - YZ
+        Depth = -(PZ + ZX + ZY - ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        CameraX = PX + XX + XY + XZ
+        CameraY = PY + YX + YY + YZ
+        Depth = -(PZ + ZX + ZY + ZZ)
+
+        if Depth > 0.05 then
+            ScreenX = CenterX + CameraX * FocalX / Depth
+            ScreenY = CenterY - CameraY * FocalY / Depth
+            HasPoint = true
+
+            if ScreenX < MinX then MinX = ScreenX end
+            if ScreenY < MinY then MinY = ScreenY end
+            if ScreenX > MaxX then MaxX = ScreenX end
+            if ScreenY > MaxY then MaxY = ScreenY end
+        end
+
+        State.MinX = MinX
+        State.MinY = MinY
+        State.MaxX = MaxX
+        State.MaxY = MaxY
+        State.HasPoint = HasPoint
     end
 
     local function RootIsInFront(

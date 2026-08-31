@@ -15,6 +15,7 @@ SOURCE_ORDER = (
     "Scheduler",
     "PlayerESP",
     "CorpseESP",
+    "LootESP",
     "ESP",
     "UI",
     "NeverLose",
@@ -31,6 +32,7 @@ SOURCES = {
 
     "PlayerESP": ROOT / "src" / "Modules" / "PlayerESP.lua",
     "CorpseESP": ROOT / "src" / "Modules" / "CorpseESP.lua",
+    "LootESP": ROOT / "src" / "Modules" / "LootESP.lua",
     "ESP": ROOT / "src" / "Modules" / "ESP.lua",
 
     "UI": ROOT / "src" / "Ui.lua",
@@ -167,6 +169,7 @@ local SchedulerModule = Execute("Scheduler")
 
 local PlayerESPModule = Execute("PlayerESP")
 local CorpseESPModule = Execute("CorpseESP")
+local LootESPModule = Execute("LootESP")
 local ESPModule = Execute("ESP")
 
 local UIModule = Execute("UI")
@@ -182,6 +185,7 @@ Environment.NEWZ_BUNDLE = {{
 
     PlayerESPModule = PlayerESPModule,
     CorpseESPModule = CorpseESPModule,
+    LootESPModule = LootESPModule,
     ESPModule = ESPModule,
 
     UIModule = UIModule,

@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.4.0",
+    Version = "0.4.1",
 }
 
 Config.Runtime = {
@@ -61,6 +61,11 @@ Config.Corpses = {
     Box = true,
     Name = true,
     Distance = true,
+
+    Loot = false,
+    LootMaxItems = 4,
+    LootContainerName = "Loot_Corpse",
+    LootMarkerName = "Corpse",
 
     BoxStyle = "Corner",
 

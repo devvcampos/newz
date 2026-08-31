@@ -68,6 +68,30 @@ function PlayerESP.Init(Config, Dependencies)
             UpdateFrequency
         )
 
+    ---------------------------------------------------------
+    -- HOT-PATH BINDINGS
+    ---------------------------------------------------------
+
+    local BoundsCreateState = Bounds.CreateState
+    local BoundsAddBodyPart = Bounds.AddBodyPart
+    local BoundsRemoveBodyPart = Bounds.RemoveBodyPart
+    local BoundsGetCharacterBounds = Bounds.GetCharacterBounds
+
+    local VisualCreate = Visuals.Create
+    local VisualHide = Visuals.Hide
+    local VisualDestroyEntity = Visuals.DestroyEntity
+    local VisualUpdateBox = Visuals.UpdateBox
+    local VisualSetVisible = Visuals.SetVisible
+    local VisualSetText = Visuals.SetText
+    local VisualSetTextColor = Visuals.SetTextColor
+
+    local SchedulerAdd = Scheduler.Add
+    local SchedulerRemove = Scheduler.Remove
+    local SchedulerStep = Scheduler.Step
+    local SchedulerResetTiming = Scheduler.ResetTiming
+    local SchedulerGetCount = Scheduler.GetCount
+    local SchedulerDestroy = Scheduler.Destroy
+
     local Destroyed = false
     local WasEnabled = false
 
@@ -294,7 +318,12 @@ function PlayerESP.Init(Config, Dependencies)
         return Root
     end
 
-    local function IsEntityVisible(Data, Camera, Root)
+    local function IsEntityVisible(
+        Data,
+        Camera,
+        Root,
+        CameraPosition
+    )
         if not Settings.VisibilityCheck then
             return true
         end
@@ -334,8 +363,12 @@ function PlayerESP.Init(Config, Dependencies)
         VisibilityParams.FilterDescendantsInstances =
             VisibilityIgnore
 
-        local Origin = Camera.CFrame.Position
-        local Direction = Target.Position - Origin
+        local Origin =
+            CameraPosition
+
+        local Direction =
+            Target.Position
+            - Origin
 
         local Result =
             Workspace:Raycast(
@@ -426,7 +459,7 @@ function PlayerESP.Init(Config, Dependencies)
 
             Connections = {},
 
-            Bounds = Bounds.CreateState(),
+            Bounds = BoundsCreateState(),
             RenderState = {},
             Hidden = false,
 
@@ -444,7 +477,7 @@ function PlayerESP.Init(Config, Dependencies)
         }
 
         Data.Visuals =
-            Visuals.Create(
+            VisualCreate(
                 "ESP_" .. Player.Name,
                 {
                     "Name",
@@ -460,10 +493,10 @@ function PlayerESP.Init(Config, Dependencies)
             Player.Name
 
         Entities[Character] = Data
-        Scheduler.Add(Data)
+        SchedulerAdd(Data)
 
         for _, Object in ipairs(Character:GetDescendants()) do
-            Bounds.AddBodyPart(
+            BoundsAddBodyPart(
                 Data,
                 Object
             )
@@ -478,7 +511,7 @@ function PlayerESP.Init(Config, Dependencies)
 
         Data.Connections.DescendantAdded =
             Character.DescendantAdded:Connect(function(Object)
-                Bounds.AddBodyPart(
+                BoundsAddBodyPart(
                     Data,
                     Object
                 )
@@ -502,7 +535,7 @@ function PlayerESP.Init(Config, Dependencies)
 
         Data.Connections.DescendantRemoving =
             Character.DescendantRemoving:Connect(function(Object)
-                Bounds.RemoveBodyPart(
+                BoundsRemoveBodyPart(
                     Data,
                     Object
                 )
@@ -545,7 +578,7 @@ function PlayerESP.Init(Config, Dependencies)
                 end
             end)
 
-        Visuals.Hide(Data)
+        VisualHide(Data)
     end
 
     local function UnregisterEntity(Character)
@@ -555,7 +588,7 @@ function PlayerESP.Init(Config, Dependencies)
             return
         end
 
-        Scheduler.Remove(Data)
+        SchedulerRemove(Data)
 
         for _, Connection in pairs(Data.Connections) do
             DisconnectConnection(Connection)
@@ -563,7 +596,7 @@ function PlayerESP.Init(Config, Dependencies)
 
         table.clear(Data.Connections)
 
-        Visuals.DestroyEntity(Data)
+        VisualDestroyEntity(Data)
 
         Entities[Character] = nil
     end
@@ -634,7 +667,11 @@ function PlayerESP.Init(Config, Dependencies)
     -- UPDATE
     ---------------------------------------------------------
 
-    local function UpdateEntity(Data, Camera)
+    local function UpdateEntity(
+        Data,
+        Camera,
+        CameraPosition
+    )
         local Player = Data.Player
         local Character = Data.Character
 
@@ -644,12 +681,12 @@ function PlayerESP.Init(Config, Dependencies)
             or Player.Character ~= Character
             or not Character.Parent
         then
-            Visuals.Hide(Data)
+            VisualHide(Data)
             return
         end
 
         if IsTeammate(Data) then
-            Visuals.Hide(Data)
+            VisualHide(Data)
             return
         end
 
@@ -663,7 +700,7 @@ function PlayerESP.Init(Config, Dependencies)
             or not Humanoid.Parent
             or Humanoid.Health <= 0
         then
-            Visuals.Hide(Data)
+            VisualHide(Data)
             return
         end
 
@@ -680,7 +717,7 @@ function PlayerESP.Init(Config, Dependencies)
         local Distance =
             (
                 Root.Position
-                - Camera.CFrame.Position
+                - CameraPosition
             ).Magnitude
 
         local MaxDistance =
@@ -688,7 +725,7 @@ function PlayerESP.Init(Config, Dependencies)
             or 1000
 
         if Distance > MaxDistance then
-            Visuals.Hide(Data)
+            VisualHide(Data)
             return
         end
 
@@ -698,7 +735,7 @@ function PlayerESP.Init(Config, Dependencies)
             )
 
         local CharacterBounds =
-            Bounds.GetCharacterBounds(
+            BoundsGetCharacterBounds(
                 Data,
                 Camera,
                 Root,
@@ -711,7 +748,7 @@ function PlayerESP.Init(Config, Dependencies)
         )
 
         if not CharacterBounds then
-            Visuals.Hide(Data)
+            VisualHide(Data)
             return
         end
 
@@ -724,7 +761,8 @@ function PlayerESP.Init(Config, Dependencies)
             IsEntityVisible(
                 Data,
                 Camera,
-                Root
+                Root,
+                CameraPosition
             )
 
         ProfileFinish(
@@ -795,7 +833,7 @@ function PlayerESP.Init(Config, Dependencies)
 
         Data.Hidden = false
 
-        Visuals.UpdateBox(
+        VisualUpdateBox(
             Data,
             CharacterBounds,
             Settings,
@@ -805,28 +843,28 @@ function PlayerESP.Init(Config, Dependencies)
         local Labels = Data.Visuals.Labels
         local State = Data.RenderState
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "NameColor",
             Labels.Name,
             TextColor
         )
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "WeaponColor",
             Labels.Weapon,
             TextColor
         )
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "DistanceColor",
             Labels.Distance,
             TextColor
         )
 
-        Visuals.SetTextColor(
+        VisualSetTextColor(
             State,
             "HealthColor",
             Labels.Health,
@@ -836,7 +874,7 @@ function PlayerESP.Init(Config, Dependencies)
         local ShowName =
             Settings.Name == true
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "NameVisible",
             Labels.Name,
@@ -859,7 +897,7 @@ function PlayerESP.Init(Config, Dependencies)
         local ShowHealth =
             Settings.Health == true
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "HealthVisible",
             Labels.Health,
@@ -867,7 +905,7 @@ function PlayerESP.Init(Config, Dependencies)
         )
 
         if ShowHealth then
-            Visuals.SetText(
+            VisualSetText(
                 State,
                 "HealthText",
                 Labels.Health,
@@ -891,7 +929,7 @@ function PlayerESP.Init(Config, Dependencies)
             and type(WeaponName) == "string"
             and WeaponName ~= ""
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "WeaponVisible",
             Labels.Weapon,
@@ -899,7 +937,7 @@ function PlayerESP.Init(Config, Dependencies)
         )
 
         if ShowWeapon then
-            Visuals.SetText(
+            VisualSetText(
                 State,
                 "WeaponText",
                 Labels.Weapon,
@@ -918,7 +956,7 @@ function PlayerESP.Init(Config, Dependencies)
         local ShowDistance =
             Settings.Distance == true
 
-        Visuals.SetVisible(
+        VisualSetVisible(
             State,
             "DistanceVisible",
             Labels.Distance,
@@ -926,7 +964,7 @@ function PlayerESP.Init(Config, Dependencies)
         )
 
         if ShowDistance then
-            Visuals.SetText(
+            VisualSetText(
                 State,
                 "DistanceText",
                 Labels.Distance,
@@ -943,6 +981,31 @@ function PlayerESP.Init(Config, Dependencies)
         ProfileFinish(
             "Players.Visuals",
             VisualStart
+        )
+    end
+
+    ---------------------------------------------------------
+    -- SCHEDULED HOT PATH
+    ---------------------------------------------------------
+
+    local ActiveCamera = nil
+    local ActiveCameraPosition = nil
+
+    local function ProcessScheduledEntity(Data)
+        local UpdateStart =
+            ProfileBegin(
+                "Players.Update"
+            )
+
+        UpdateEntity(
+            Data,
+            ActiveCamera,
+            ActiveCameraPosition
+        )
+
+        ProfileFinish(
+            "Players.Update",
+            UpdateStart
         )
     end
 
@@ -978,10 +1041,10 @@ function PlayerESP.Init(Config, Dependencies)
         if Settings.Enabled ~= true then
             if WasEnabled then
                 for _, Data in pairs(Entities) do
-                    Visuals.Hide(Data)
+                    VisualHide(Data)
                 end
 
-                Scheduler.ResetTiming()
+                SchedulerResetTiming()
                 WasEnabled = false
             end
 
@@ -994,26 +1057,20 @@ function PlayerESP.Init(Config, Dependencies)
             return 0
         end
 
+        ActiveCamera =
+            Camera
+
+        ActiveCameraPosition =
+            Camera.CFrame.Position
+
         local Budget =
-            Scheduler.Step(
+            SchedulerStep(
                 DeltaTime,
-                function(Data)
-                    local UpdateStart =
-                        ProfileBegin(
-                            "Players.Update"
-                        )
-
-                    UpdateEntity(
-                        Data,
-                        Camera
-                    )
-
-                    ProfileFinish(
-                        "Players.Update",
-                        UpdateStart
-                    )
-                end
+                ProcessScheduledEntity
             )
+
+        ActiveCamera = nil
+        ActiveCameraPosition = nil
 
         if Budget > 0 then
             ProfileCount(
@@ -1031,7 +1088,7 @@ function PlayerESP.Init(Config, Dependencies)
     end
 
     function Controller.GetCount()
-        return Scheduler.GetCount()
+        return SchedulerGetCount()
     end
 
     function Controller.GetLocalEntity()
@@ -1075,7 +1132,7 @@ function PlayerESP.Init(Config, Dependencies)
 
         table.clear(Entities)
 
-        Scheduler.Destroy()
+        SchedulerDestroy()
     end
 
     return Controller

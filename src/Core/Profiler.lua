@@ -47,7 +47,7 @@ function Profiler.Init(Config)
     local Panel = Instance.new("Frame")
     Panel.Name = "Panel"
     Panel.Position = UDim2.fromOffset(14, 48)
-    Panel.Size = UDim2.fromOffset(430, 205)
+    Panel.Size = UDim2.fromOffset(430, 220)
     Panel.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     Panel.BackgroundTransparency = 0.15
     Panel.BorderSizePixel = 0
@@ -186,6 +186,7 @@ function Profiler.Init(Config)
             FormatMetric("Corpses.Update", "Corpse update"),
             FormatMetric("Corpses.Bounds", "Corpse bounds"),
             FormatMetric("Corpses.Visuals", "Corpse visuals"),
+            FormatMetric("Corpses.LootRefresh", "Loot refresh"),
         }, "\n")
     end
 

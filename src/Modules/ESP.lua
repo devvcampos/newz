@@ -48,6 +48,7 @@ function ESP.Init(Config, Dependencies)
     local SchedulerModule = Dependencies.SchedulerModule
     local PlayerESPModule = Dependencies.PlayerESPModule
     local CorpseESPModule = Dependencies.CorpseESPModule
+    local LootESPModule = Dependencies.LootESPModule
 
     assert(
         BoundsModule
@@ -77,6 +78,12 @@ function ESP.Init(Config, Dependencies)
         CorpseESPModule
         and type(CorpseESPModule.Init) == "function",
         "CorpseESPModule invalido"
+    )
+
+    assert(
+        LootESPModule
+        and type(LootESPModule.New) == "function",
+        "LootESPModule invalido"
     )
 
     local ProfileBegin =
@@ -173,6 +180,7 @@ function ESP.Init(Config, Dependencies)
                         Bounds = Bounds,
                         Visuals = Visuals,
                         SchedulerModule = SchedulerModule,
+                        LootModule = LootESPModule,
                         Profiler = Profiler,
                     }
                 )
@@ -182,18 +190,33 @@ function ESP.Init(Config, Dependencies)
                 "CorpseESP.Init nao retornou controller"
             )
 
+            local PlayerStep =
+                PlayerController.Step
+
+            local PlayerGetCount =
+                PlayerController.GetCount
+
+            local CorpseStep =
+                CorpseController.Step
+
+            local CorpseGetCount =
+                CorpseController.GetCount
+
+            local UpdateProjection =
+                Bounds.UpdateProjection
+
             RenderConnection =
                 RunService.RenderStepped:Connect(function(DeltaTime)
                     ProfileFrame(DeltaTime)
 
                     ProfileGauge(
                         "PlayersTracked",
-                        PlayerController.GetCount()
+                        PlayerGetCount()
                     )
 
                     ProfileGauge(
                         "CorpsesTracked",
-                        CorpseController.GetCount()
+                        CorpseGetCount()
                     )
 
                     local RenderStart =
@@ -211,12 +234,12 @@ function ESP.Init(Config, Dependencies)
                         not PlayersEnabled
                         and not CorpsesEnabled
                     then
-                        PlayerController.Step(
+                        PlayerStep(
                             DeltaTime,
                             nil
                         )
 
-                        CorpseController.Step(
+                        CorpseStep(
                             DeltaTime,
                             nil
                         )
@@ -233,12 +256,12 @@ function ESP.Init(Config, Dependencies)
                         Workspace.CurrentCamera
 
                     if not Camera then
-                        PlayerController.Step(
+                        PlayerStep(
                             DeltaTime,
                             nil
                         )
 
-                        CorpseController.Step(
+                        CorpseStep(
                             DeltaTime,
                             nil
                         )
@@ -251,16 +274,16 @@ function ESP.Init(Config, Dependencies)
                         return
                     end
 
-                    Bounds.UpdateProjection(
+                    UpdateProjection(
                         Camera
                     )
 
-                    PlayerController.Step(
+                    PlayerStep(
                         DeltaTime,
                         Camera
                     )
 
-                    CorpseController.Step(
+                    CorpseStep(
                         DeltaTime,
                         Camera
                     )

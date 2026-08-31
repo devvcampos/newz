@@ -398,6 +398,29 @@ function UI.Init(Config, Dependencies)
             end
         )
 
+        AddToggle(
+            CorpsesSection,
+            "Loot",
+            "corpses_loot",
+            Config.Corpses.Loot,
+            function(Value)
+                Config.Corpses.Loot = Value
+            end
+        )
+
+        AddSlider(
+            CorpsesSection,
+            "Loot Max Items",
+            "corpses_loot_max_items",
+            Config.Corpses.LootMaxItems,
+            1,
+            10,
+            0,
+            function(Value)
+                Config.Corpses.LootMaxItems = Value
+            end
+        )
+
         local CorpseAppearanceSection = CorpsesTab:AddSection({
             Name = "Appearance",
             Position = "right",
