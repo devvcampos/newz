@@ -1,319 +1,174 @@
-local BASE_URL =
-    "https://raw.githubusercontent.com/devvcampos/newz/main/src/"
+local HttpService = game:GetService("HttpService")
 
+local Environment = (getgenv and getgenv()) or _G
 
-local CacheBust =
-    tostring(
-        DateTime.now().UnixTimestampMillis
-    )
+local function Traceback(Error)
+    if debug and type(debug.traceback) == "function" then
+        return debug.traceback(tostring(Error), 2)
+    end
 
+    return tostring(Error)
+end
 
----------------------------------------------------------
--- MODULE LOADER
----------------------------------------------------------
+local function CleanupController(Controller)
+    if Controller and type(Controller.Destroy) == "function" then
+        pcall(Controller.Destroy)
+    end
+end
 
-local function LoadModule(Path)
+local CacheBust = tostring(DateTime.now().UnixTimestampMillis)
 
-    local URL =
-        BASE_URL
-        .. Path
-        .. "?cb="
+local function ResolveSourceRef()
+    local ExplicitRef = Environment.NEWZ_SOURCE_REF
+
+    if type(ExplicitRef) == "string" and ExplicitRef ~= "" and ExplicitRef ~= "main" then
+        return ExplicitRef
+    end
+
+    local ApiURL =
+        "https://api.github.com/repos/devvcampos/newz/commits/main?cb="
         .. CacheBust
 
-
-    local Source =
-        game:HttpGet(URL)
-
-
-    local Chunk, Error =
-        loadstring(Source)
-
-
-    assert(
-        Chunk,
-        "Falha ao carregar "
-        .. Path
-        .. ": "
-        .. tostring(Error)
-    )
-
-
-    local Success, Result =
-        pcall(Chunk)
-
+    local Success, Body = pcall(game.HttpGet, game, ApiURL)
 
     assert(
         Success,
-        "Erro executando "
-        .. Path
-        .. ": "
-        .. tostring(Result)
+        "Nao foi possivel resolver o commit atual do Newz. "
+        .. "Use dist/newz.lua ou defina NEWZ_SOURCE_REF para um commit/tag imutavel."
     )
 
+    local DecodeSuccess, Data =
+        pcall(HttpService.JSONDecode, HttpService, Body)
+
+    assert(
+        DecodeSuccess
+        and type(Data) == "table"
+        and type(Data.sha) == "string"
+        and Data.sha ~= "",
+        "Resposta invalida ao resolver o commit do Newz"
+    )
+
+    return Data.sha
+end
+
+local function LoadModuleFromRef(SourceRef, Path)
+    local URL =
+        "https://raw.githubusercontent.com/devvcampos/newz/"
+        .. SourceRef
+        .. "/"
+        .. Path
+
+    local Source = game:HttpGet(URL)
+    local Chunk, LoadError = loadstring(Source, "@newz/" .. Path)
+
+    assert(
+        Chunk,
+        "Falha ao carregar " .. Path .. ": " .. tostring(LoadError)
+    )
+
+    local Success, Result = xpcall(Chunk, Traceback)
+
+    assert(
+        Success,
+        "Erro executando " .. Path .. ": " .. tostring(Result)
+    )
 
     return Result
 end
 
+local Bundled = Environment.NEWZ_BUNDLE
 
----------------------------------------------------------
--- ENVIRONMENT
----------------------------------------------------------
+local Config
+local ESPModule
+local UIModule
+local NeverLose
+local SourceRef
 
-local Environment =
-    (getgenv and getgenv())
-    or _G
+if type(Bundled) == "table" then
+    Config = Bundled.Config
+    ESPModule = Bundled.ESPModule
+    UIModule = Bundled.UIModule
+    NeverLose = Bundled.NeverLose
+    SourceRef = "bundle"
+else
+    SourceRef = ResolveSourceRef()
 
-
----------------------------------------------------------
--- REMOVE INSTANCIA ANTERIOR
----------------------------------------------------------
-
-if
-    Environment.NEWZ
-    and type(Environment.NEWZ.Destroy) == "function"
-then
-
-    pcall(
-        Environment.NEWZ.Destroy
-    )
-
+    Config = LoadModuleFromRef(SourceRef, "src/Config.lua")
+    ESPModule = LoadModuleFromRef(SourceRef, "src/Modules/ESP.lua")
+    UIModule = LoadModuleFromRef(SourceRef, "src/Ui.lua")
+    NeverLose = LoadModuleFromRef(SourceRef, "vendor/NeverLose.lua")
 end
 
-
----------------------------------------------------------
--- LOAD MODULES
----------------------------------------------------------
-
-local Config =
-    LoadModule(
-        "Config.lua"
-    )
-
-
-local ESPModule =
-    LoadModule(
-        "Modules/ESP.lua"
-    )
-
-
-local UIModule =
-    LoadModule(
-        "Ui.lua"
-    )
-
-
----------------------------------------------------------
--- VALIDATION
----------------------------------------------------------
-
+assert(type(Config) == "table", "Config.lua nao retornou uma tabela")
 assert(
-    type(Config) == "table",
-    "Config.lua nao retornou uma tabela"
-)
-
-
-assert(
-    type(ESPModule) == "table"
-    and type(ESPModule.Init) == "function",
+    type(ESPModule) == "table" and type(ESPModule.Init) == "function",
     "ESP.lua invalido"
 )
-
-
 assert(
-    type(UIModule) == "table"
-    and type(UIModule.Init) == "function",
+    type(UIModule) == "table" and type(UIModule.Init) == "function",
     "Ui.lua invalido"
 )
-
-
----------------------------------------------------------
--- INIT
----------------------------------------------------------
-
-local ESP =
-    nil
-
-
-local UI =
-    nil
-
-
-local function CleanupController(
-    Controller
+assert(
+    type(NeverLose) == "table" and type(NeverLose.CreateWindow) == "function",
+    "NeverLose invalida"
 )
 
-    if
-        Controller
-        and type(Controller.Destroy) == "function"
-    then
-
-        pcall(
-            Controller.Destroy
-        )
-
-    end
-
+if Environment.NEWZ and type(Environment.NEWZ.Destroy) == "function" then
+    pcall(Environment.NEWZ.Destroy)
 end
 
+local ESP
+local UI
 
-local function FormatInitError(
-    InitError
-)
+local InitSuccess, InitError = xpcall(function()
+    ESP = ESPModule.Init(Config)
+    assert(type(ESP) == "table", "ESP.Init nao retornou um controller")
 
-    if
-        debug
-        and type(debug.traceback) == "function"
-    then
-
-        return debug.traceback(
-            tostring(InitError),
-            2
-        )
-
-    end
-
-
-    return tostring(
-        InitError
-    )
-
-end
-
-
-local InitSuccess,
-    InitError =
-        xpcall(function()
-
-            ESP =
-                ESPModule.Init(
-                    Config
-                )
-
-
-            assert(
-                type(ESP) == "table",
-                "ESP.Init nao retornou um controller"
-            )
-
-
-            UI =
-                UIModule.Init(
-                    Config
-                )
-
-
-            assert(
-                type(UI) == "table",
-                "UI.Init nao retornou um controller"
-            )
-
-        end,
-        FormatInitError)
-
+    UI = UIModule.Init(Config, {
+        NeverLose = NeverLose,
+    })
+    assert(type(UI) == "table", "UI.Init nao retornou um controller")
+end, Traceback)
 
 if not InitSuccess then
-
-    CleanupController(
-        UI
-    )
-
-
-    CleanupController(
-        ESP
-    )
-
+    CleanupController(UI)
+    CleanupController(ESP)
 
     error(
-        "Falha ao inicializar newz:\n"
-        .. tostring(InitError),
+        "Falha ao inicializar Newz:\n" .. tostring(InitError),
         0
     )
-
 end
 
+local Project = {
+    Config = Config,
+    ESP = ESP,
+    UI = UI,
+    SourceRef = SourceRef,
+}
 
----------------------------------------------------------
--- PROJECT
----------------------------------------------------------
-
-local Project = {}
-
-
-local ProjectDestroyed =
-    false
-
-
-Project.Config =
-    Config
-
-
-Project.ESP =
-    ESP
-
-
-Project.UI =
-    UI
-
-
----------------------------------------------------------
--- DESTROY
----------------------------------------------------------
+local ProjectDestroyed = false
 
 function Project.Destroy()
-
     if ProjectDestroyed then
         return
     end
 
+    ProjectDestroyed = true
 
-    ProjectDestroyed =
-        true
+    CleanupController(UI)
+    CleanupController(ESP)
 
+    UI = nil
+    ESP = nil
 
-    CleanupController(
-        UI
-    )
+    Project.UI = nil
+    Project.ESP = nil
 
-
-    CleanupController(
-        ESP
-    )
-
-
-    UI =
-        nil
-
-
-    ESP =
-        nil
-
-
-    Project.UI =
-        nil
-
-
-    Project.ESP =
-        nil
-
-
-    if
-        Environment.NEWZ
-        == Project
-    then
-
-        Environment.NEWZ =
-            nil
+    if Environment.NEWZ == Project then
+        Environment.NEWZ = nil
     end
-
 end
 
-
----------------------------------------------------------
--- GLOBAL PROJECT
----------------------------------------------------------
-
-Environment.NEWZ =
-    Project
-
-
+Environment.NEWZ = Project
 return Project
