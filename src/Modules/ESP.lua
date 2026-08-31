@@ -1991,46 +1991,45 @@ function ESP.Init(Config)
         -- BOX COLOR
         -----------------------------------------------------
 
-        local BoxColor
+-----------------------------------------------------
+-- BOX COLOR
+-----------------------------------------------------
+
+local DefaultBoxColor =
+    Settings.BoxColor
+    or Color3.fromRGB(
+        255,
+        255,
+        255
+    )
 
 
-        if
-            Settings.VisibilityCheck
-        then
+local HiddenBoxColor =
+    Settings.HiddenColor
+    or Color3.fromRGB(
+        255,
+        90,
+        90
+    )
 
-            if Visible then
 
-                BoxColor =
-                    Settings.VisibleColor
-                    or Color3.fromRGB(
-                        90,
-                        255,
-                        130
-                    )
+local BoxColor =
+    DefaultBoxColor
 
-            else
 
-                BoxColor =
-                    Settings.HiddenColor
-                    or Color3.fromRGB(
-                        255,
-                        90,
-                        90
-                    )
+-----------------------------------------------------
+-- VISIBILITY COLOR
+-----------------------------------------------------
 
-            end
+if
+    Settings.VisibilityCheck
+    and not Visible
+then
 
-        else
+    BoxColor =
+        HiddenBoxColor
 
-            BoxColor =
-                Settings.BoxColor
-                or Color3.new(
-                    1,
-                    1,
-                    1
-                )
-
-        end
+end
 
 
         -----------------------------------------------------

@@ -51,26 +51,19 @@ Config.ESP = {
 
     BoxStyle = "Corner",
 
-    BoxColor =
-        Color3.fromRGB(
-            255,
-            255,
-            255
-        ),
+BoxColor =
+    Color3.fromRGB(
+        255,
+        255,
+        255
+    ),
 
-    VisibleColor =
-        Color3.fromRGB(
-            90,
-            255,
-            130
-        ),
-
-    HiddenColor =
-        Color3.fromRGB(
-            255,
-            90,
-            90
-        ),
+HiddenColor =
+    Color3.fromRGB(
+        255,
+        90,
+        90
+    ),
 
     TextColor =
         Color3.fromRGB(
