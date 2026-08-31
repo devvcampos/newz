@@ -47,7 +47,7 @@ function Profiler.Init(Config)
     local Panel = Instance.new("Frame")
     Panel.Name = "Panel"
     Panel.Position = UDim2.fromOffset(14, 48)
-    Panel.Size = UDim2.fromOffset(430, 190)
+    Panel.Size = UDim2.fromOffset(430, 205)
     Panel.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     Panel.BackgroundTransparency = 0.15
     Panel.BorderSizePixel = 0
@@ -178,6 +178,7 @@ function Profiler.Init(Config)
                 PlayerUpdates,
                 CorpseUpdates
             ),
+            FormatMetric("Projection.Setup", "Projection setup"),
             FormatMetric("Players.Update", "Player update"),
             FormatMetric("Players.Bounds", "Player bounds"),
             FormatMetric("Players.Visibility", "Visibility"),

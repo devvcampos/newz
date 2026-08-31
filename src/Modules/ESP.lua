@@ -820,10 +820,169 @@ function ESP.Init(Config, Dependencies)
     end
 
     ---------------------------------------------------------
-    -- SCREEN BOUNDS
+    -- SCREEN BOUNDS / CALIBRATED PROJECTION ENGINE
     ---------------------------------------------------------
 
-    local function AddProjectedCorner(
+    -- The old path called Camera:WorldToViewportPoint for every corner.
+    -- R15 can require roughly 120 calls per entity update.
+    --
+    -- We now calibrate the camera projection once per rendered frame
+    -- with three native projections, then project the exact same eight
+    -- corners using camera-space math.
+    --
+    -- A legacy fallback is kept for unusual/invalid camera states.
+
+    local Projection = {
+        Valid = false,
+
+        CameraCFrame = CFrame.new(),
+
+        CenterX = 0,
+        CenterY = 0,
+
+        FocalX = 0,
+        FocalY = 0,
+
+        ViewportX = 0,
+        ViewportY = 0,
+    }
+
+    local function UpdateProjection(Camera)
+        local ProjectionStart =
+            ProfileBegin(
+                "Projection.Setup"
+            )
+
+        local CameraCFrame =
+            Camera.CFrame
+
+        local CameraPosition =
+            CameraCFrame.Position
+
+        -- One stud in front of the camera.
+        local CenterWorld =
+            CameraPosition
+            + CameraCFrame.LookVector
+
+        local RightWorld =
+            CenterWorld
+            + CameraCFrame.RightVector
+
+        local UpWorld =
+            CenterWorld
+            + CameraCFrame.UpVector
+
+        local CenterScreen =
+            Camera:WorldToViewportPoint(
+                CenterWorld
+            )
+
+        local RightScreen =
+            Camera:WorldToViewportPoint(
+                RightWorld
+            )
+
+        local UpScreen =
+            Camera:WorldToViewportPoint(
+                UpWorld
+            )
+
+        local FocalX =
+            RightScreen.X
+            - CenterScreen.X
+
+        local FocalY =
+            CenterScreen.Y
+            - UpScreen.Y
+
+        local Viewport =
+            Camera.ViewportSize
+
+        Projection.CameraCFrame =
+            CameraCFrame
+
+        Projection.CenterX =
+            CenterScreen.X
+
+        Projection.CenterY =
+            CenterScreen.Y
+
+        Projection.FocalX =
+            FocalX
+
+        Projection.FocalY =
+            FocalY
+
+        Projection.ViewportX =
+            Viewport.X
+
+        Projection.ViewportY =
+            Viewport.Y
+
+        Projection.Valid =
+            CenterScreen.Z > 0.05
+            and math.abs(FocalX) > 0.001
+            and math.abs(FocalY) > 0.001
+            and Viewport.X > 0
+            and Viewport.Y > 0
+
+        ProfileFinish(
+            "Projection.Setup",
+            ProjectionStart
+        )
+    end
+
+    local function AddFastProjectedCorner(
+        Bounds,
+        CameraX,
+        CameraY,
+        CameraZ
+    )
+        local Depth =
+            -CameraZ
+
+        -- Same near-plane cutoff used by the old native path.
+        if Depth <= 0.05 then
+            return
+        end
+
+        local ScreenX =
+            Projection.CenterX
+            + (
+                CameraX
+                * Projection.FocalX
+                / Depth
+            )
+
+        local ScreenY =
+            Projection.CenterY
+            - (
+                CameraY
+                * Projection.FocalY
+                / Depth
+            )
+
+        Bounds.HasPoint =
+            true
+
+        if ScreenX < Bounds.MinX then
+            Bounds.MinX = ScreenX
+        end
+
+        if ScreenY < Bounds.MinY then
+            Bounds.MinY = ScreenY
+        end
+
+        if ScreenX > Bounds.MaxX then
+            Bounds.MaxX = ScreenX
+        end
+
+        if ScreenY > Bounds.MaxY then
+            Bounds.MaxY = ScreenY
+        end
+    end
+
+    local function AddLegacyProjectedCorner(
         Camera,
         Bounds,
         PartCFrame,
@@ -849,7 +1008,8 @@ function ESP.Init(Config, Dependencies)
             return
         end
 
-        Bounds.HasPoint = true
+        Bounds.HasPoint =
+            true
 
         if ScreenPosition.X < Bounds.MinX then
             Bounds.MinX = ScreenPosition.X
@@ -868,27 +1028,173 @@ function ESP.Init(Config, Dependencies)
         end
     end
 
-    local function ProjectPart(Part, Camera, Bounds)
-        local Half = Part.Size / 2
-        local X, Y, Z = Half.X, Half.Y, Half.Z
-        local PartCFrame = Part.CFrame
+    local function ProjectPartLegacy(
+        Part,
+        Camera,
+        Bounds
+    )
+        local Size =
+            Part.Size
 
-        -- Same eight corners as before, but without creating a closure
-        -- for every body part on every update.
-        AddProjectedCorner(Camera, Bounds, PartCFrame, -X, -Y, -Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame, -X, -Y,  Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame, -X,  Y, -Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame, -X,  Y,  Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame,  X, -Y, -Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame,  X, -Y,  Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame,  X,  Y, -Z)
-        AddProjectedCorner(Camera, Bounds, PartCFrame,  X,  Y,  Z)
+        local X =
+            Size.X * 0.5
+
+        local Y =
+            Size.Y * 0.5
+
+        local Z =
+            Size.Z * 0.5
+
+        local PartCFrame =
+            Part.CFrame
+
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame, -X, -Y, -Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame, -X, -Y,  Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame, -X,  Y, -Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame, -X,  Y,  Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame,  X, -Y, -Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame,  X, -Y,  Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame,  X,  Y, -Z)
+        AddLegacyProjectedCorner(Camera, Bounds, PartCFrame,  X,  Y,  Z)
+    end
+
+    local function ProjectPartFast(
+        Part,
+        Bounds
+    )
+        local Size =
+            Part.Size
+
+        local X =
+            Size.X * 0.5
+
+        local Y =
+            Size.Y * 0.5
+
+        local Z =
+            Size.Z * 0.5
+
+        -- One CFrame transform replaces eight world->viewport transforms.
+        local CameraPartCFrame =
+            Projection.CameraCFrame:
+                ToObjectSpace(
+                    Part.CFrame
+                )
+
+        local PX,
+            PY,
+            PZ,
+            R00,
+            R01,
+            R02,
+            R10,
+            R11,
+            R12,
+            R20,
+            R21,
+            R22 =
+                CameraPartCFrame:
+                    GetComponents()
+
+        -- Precompute each local half-axis contribution.
+        local XX = R00 * X
+        local XY = R01 * Y
+        local XZ = R02 * Z
+
+        local YX = R10 * X
+        local YY = R11 * Y
+        local YZ = R12 * Z
+
+        local ZX = R20 * X
+        local ZY = R21 * Y
+        local ZZ = R22 * Z
+
+        -- Exact same eight corners as the legacy implementation.
+        AddFastProjectedCorner(
+            Bounds,
+            PX - XX - XY - XZ,
+            PY - YX - YY - YZ,
+            PZ - ZX - ZY - ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX - XX - XY + XZ,
+            PY - YX - YY + YZ,
+            PZ - ZX - ZY + ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX - XX + XY - XZ,
+            PY - YX + YY - YZ,
+            PZ - ZX + ZY - ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX - XX + XY + XZ,
+            PY - YX + YY + YZ,
+            PZ - ZX + ZY + ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX + XX - XY - XZ,
+            PY + YX - YY - YZ,
+            PZ + ZX - ZY - ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX + XX - XY + XZ,
+            PY + YX - YY + YZ,
+            PZ + ZX - ZY + ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX + XX + XY - XZ,
+            PY + YX + YY - YZ,
+            PZ + ZX + ZY - ZZ
+        )
+
+        AddFastProjectedCorner(
+            Bounds,
+            PX + XX + XY + XZ,
+            PY + YX + YY + YZ,
+            PZ + ZX + ZY + ZZ
+        )
+    end
+
+    local function RootIsInFront(
+        Camera,
+        Root
+    )
+        if Projection.Valid then
+            local CameraPosition =
+                Projection.CameraCFrame:
+                    PointToObjectSpace(
+                        Root.Position
+                    )
+
+            return
+                -CameraPosition.Z
+                > 0.05
+        end
+
+        local RootScreen =
+            Camera:WorldToViewportPoint(
+                Root.Position
+            )
+
+        return
+            RootScreen.Z
+            > 0.05
     end
 
     local function GetCharacterBounds(Data, Camera, Root, StyleSettings)
-        local RootScreen = Camera:WorldToViewportPoint(Root.Position)
-
-        if RootScreen.Z <= 0.05 then
+        if not RootIsInFront(Camera, Root) then
             return nil
         end
 
@@ -899,11 +1205,34 @@ function ESP.Init(Config, Dependencies)
         Bounds.MaxY = -math.huge
         Bounds.HasPoint = false
 
-        for Part in pairs(Data.BodyParts) do
-            if Part.Parent then
-                ProjectPart(Part, Camera, Bounds)
-            else
-                RemoveBodyPart(Data, Part)
+        if Projection.Valid then
+            for Part in pairs(Data.BodyParts) do
+                if Part.Parent then
+                    ProjectPartFast(
+                        Part,
+                        Bounds
+                    )
+                else
+                    RemoveBodyPart(
+                        Data,
+                        Part
+                    )
+                end
+            end
+        else
+            for Part in pairs(Data.BodyParts) do
+                if Part.Parent then
+                    ProjectPartLegacy(
+                        Part,
+                        Camera,
+                        Bounds
+                    )
+                else
+                    RemoveBodyPart(
+                        Data,
+                        Part
+                    )
+                end
             end
         end
 
@@ -911,23 +1240,58 @@ function ESP.Init(Config, Dependencies)
             return nil
         end
 
-        local Viewport = Camera.ViewportSize
+        local ViewportX
+        local ViewportY
+
+        if Projection.Valid then
+            ViewportX = Projection.ViewportX
+            ViewportY = Projection.ViewportY
+        else
+            local Viewport =
+                Camera.ViewportSize
+
+            ViewportX = Viewport.X
+            ViewportY = Viewport.Y
+        end
 
         if
             Bounds.MaxX < 0
-            or Bounds.MinX > Viewport.X
+            or Bounds.MinX > ViewportX
             or Bounds.MaxY < 0
-            or Bounds.MinY > Viewport.Y
+            or Bounds.MinY > ViewportY
         then
             return nil
         end
 
         StyleSettings = StyleSettings or Settings
-        local Padding = tonumber(StyleSettings.BoxPadding) or 2
-        local X = Bounds.MinX - Padding
-        local Y = Bounds.MinY - Padding
-        local Width = (Bounds.MaxX - Bounds.MinX) + Padding * 2
-        local Height = (Bounds.MaxY - Bounds.MinY) + Padding * 2
+
+        local Padding =
+            tonumber(
+                StyleSettings.BoxPadding
+            )
+            or 2
+
+        local X =
+            Bounds.MinX
+            - Padding
+
+        local Y =
+            Bounds.MinY
+            - Padding
+
+        local Width =
+            (
+                Bounds.MaxX
+                - Bounds.MinX
+            )
+            + Padding * 2
+
+        local Height =
+            (
+                Bounds.MaxY
+                - Bounds.MinY
+            )
+            + Padding * 2
 
         if Width <= 2 or Height <= 2 then
             return nil
@@ -1997,6 +2361,10 @@ function ESP.Init(Config, Dependencies)
 
                 return
             end
+
+            UpdateProjection(
+                Camera
+            )
 
             if PlayersEnabled then
                 local Count = #EntityList
