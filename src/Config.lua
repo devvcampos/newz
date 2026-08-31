@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.2.0",
+    Version = "0.3.0",
 }
 
 Config.Runtime = {
@@ -39,6 +39,27 @@ Config.ESP = {
     TextColor = Color3.fromRGB(255, 255, 255),
 
     DynamicHealthColor = true,
+
+    BoxThickness = 1,
+    BoxPadding = 2,
+    CornerRatio = 0.25,
+
+    MaxDistance = 1000,
+}
+
+Config.Corpses = {
+    Enabled = false,
+
+    FolderName = "Corpses",
+
+    Box = true,
+    Name = true,
+    Distance = true,
+
+    BoxStyle = "Corner",
+
+    Color = Color3.fromRGB(255, 190, 90),
+    TextColor = Color3.fromRGB(255, 255, 255),
 
     BoxThickness = 1,
     BoxPadding = 2,

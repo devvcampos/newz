@@ -171,6 +171,10 @@ function UI.Init(Config, Dependencies)
             })
         end
 
+        -----------------------------------------------------
+        -- PLAYERS
+        -----------------------------------------------------
+
         local PlayersTab = Window:AddTab({
             Icon = "crosshairs",
             Name = "Players",
@@ -339,6 +343,153 @@ function UI.Init(Config, Dependencies)
             end
         )
 
+        -----------------------------------------------------
+        -- CORPSES
+        -----------------------------------------------------
+
+        local CorpsesTab = Window:AddTab({
+            Icon = "crosshairs",
+            Name = "Corpses",
+            Type = "Double",
+        })
+
+        local CorpsesSection = CorpsesTab:AddSection({
+            Name = "Corpse ESP",
+            Position = "left",
+        })
+
+        AddToggle(
+            CorpsesSection,
+            "Enabled",
+            "corpses_enabled",
+            Config.Corpses.Enabled,
+            function(Value)
+                Config.Corpses.Enabled = Value
+            end
+        )
+
+        AddToggle(
+            CorpsesSection,
+            "Box",
+            "corpses_box",
+            Config.Corpses.Box,
+            function(Value)
+                Config.Corpses.Box = Value
+            end
+        )
+
+        AddToggle(
+            CorpsesSection,
+            "Name",
+            "corpses_name",
+            Config.Corpses.Name,
+            function(Value)
+                Config.Corpses.Name = Value
+            end
+        )
+
+        AddToggle(
+            CorpsesSection,
+            "Distance",
+            "corpses_distance",
+            Config.Corpses.Distance,
+            function(Value)
+                Config.Corpses.Distance = Value
+            end
+        )
+
+        local CorpseAppearanceSection = CorpsesTab:AddSection({
+            Name = "Appearance",
+            Position = "right",
+        })
+
+        AddDropdown(
+            CorpseAppearanceSection,
+            "Box Style",
+            "corpses_box_style",
+            Config.Corpses.BoxStyle,
+            { "Corner", "Full" },
+            function(Value)
+                Config.Corpses.BoxStyle = Value
+            end
+        )
+
+        AddColorPicker(
+            CorpseAppearanceSection,
+            "Corpse Color",
+            "corpses_color",
+            Config.Corpses.Color,
+            function(Value)
+                Config.Corpses.Color = Value
+            end
+        )
+
+        AddColorPicker(
+            CorpseAppearanceSection,
+            "Text Color",
+            "corpses_text_color",
+            Config.Corpses.TextColor,
+            function(Value)
+                Config.Corpses.TextColor = Value
+            end
+        )
+
+        AddSlider(
+            CorpseAppearanceSection,
+            "Box Thickness",
+            "corpses_box_thickness",
+            Config.Corpses.BoxThickness,
+            1,
+            4,
+            0,
+            function(Value)
+                Config.Corpses.BoxThickness = Value
+            end
+        )
+
+        AddSlider(
+            CorpseAppearanceSection,
+            "Corner Size",
+            "corpses_corner_ratio",
+            Config.Corpses.CornerRatio,
+            0.10,
+            0.50,
+            2,
+            function(Value)
+                Config.Corpses.CornerRatio = Value
+            end
+        )
+
+        AddSlider(
+            CorpseAppearanceSection,
+            "Box Padding",
+            "corpses_box_padding",
+            Config.Corpses.BoxPadding,
+            0,
+            10,
+            0,
+            function(Value)
+                Config.Corpses.BoxPadding = Value
+            end
+        )
+
+        AddSlider(
+            CorpseAppearanceSection,
+            "Max Distance",
+            "corpses_max_distance",
+            Config.Corpses.MaxDistance,
+            50,
+            3000,
+            0,
+            function(Value)
+                Config.Corpses.MaxDistance = Value
+            end
+        )
+
+        -----------------------------------------------------
+        -- SETTINGS
+        -----------------------------------------------------
+
         local SettingsTab = Window:AddTab({
             Icon = "gear",
             Name = "Settings",
@@ -385,7 +536,10 @@ function UI.Init(Config, Dependencies)
             true
         )
 
-        ProjectSection:AddLabel("Runtime: Players.Character", true)
+        ProjectSection:AddLabel(
+            "Runtime: Players.Character + Workspace.Corpses",
+            true
+        )
 
         local Controller = {
             Window = Window,

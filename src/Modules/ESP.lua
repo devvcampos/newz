@@ -11,6 +11,7 @@ function ESP.Init(Config)
 
     local LocalPlayer = Players.LocalPlayer
     local Settings = Config.ESP
+    local CorpseSettings = Config.Corpses or {}
     local Runtime = Config.Runtime or {}
 
     assert(LocalPlayer, "ESP precisa ser inicializado no cliente")
@@ -29,6 +30,12 @@ function ESP.Init(Config)
 
     local Connections = {}
     local PlayerConnections = {}
+
+    -- Corpse lookup/list. Corpses are independent from Player.Character.
+    local CorpseEntities = {}
+    local CorpseList = {}
+    local CorpseFolder = nil
+    local CorpseFolderConnections = {}
 
     ---------------------------------------------------------
     -- PERFORMANCE
@@ -53,6 +60,10 @@ function ESP.Init(Config)
     local SchedulerAccumulator = 0
     local WasEnabled = false
 
+    local CorpseSchedulerCursor = 1
+    local CorpseSchedulerAccumulator = 0
+    local WasCorpsesEnabled = false
+
     ---------------------------------------------------------
     -- VISIBILITY
     ---------------------------------------------------------
@@ -71,6 +82,7 @@ function ESP.Init(Config)
     local BodyPartNames = {
         -- R6
         ["Head"] = true,
+        ["Head2"] = true,
         ["Torso"] = true,
         ["Left Arm"] = true,
         ["Right Arm"] = true,
@@ -837,7 +849,7 @@ function ESP.Init(Config)
         AddProjectedCorner(Camera, Bounds, PartCFrame,  X,  Y,  Z)
     end
 
-    local function GetCharacterBounds(Data, Camera, Root)
+    local function GetCharacterBounds(Data, Camera, Root, StyleSettings)
         local RootScreen = Camera:WorldToViewportPoint(Root.Position)
 
         if RootScreen.Z <= 0.05 then
@@ -874,7 +886,8 @@ function ESP.Init(Config)
             return nil
         end
 
-        local Padding = tonumber(Settings.BoxPadding) or 2
+        StyleSettings = StyleSettings or Settings
+        local Padding = tonumber(StyleSettings.BoxPadding) or 2
         local X = Bounds.MinX - Padding
         local Y = Bounds.MinY - Padding
         local Width = (Bounds.MaxX - Bounds.MinX) + Padding * 2
@@ -923,19 +936,20 @@ function ESP.Init(Config)
     -- CORNER BOX
     ---------------------------------------------------------
 
-    local function UpdateCornerBox(Data, Width, Height, Color)
+    local function UpdateCornerBox(Data, Width, Height, Color, StyleSettings)
         local Visuals = Data.Visuals
         local State = Data.RenderState
+        StyleSettings = StyleSettings or Settings
 
         local Thickness =
             math.max(
                 1,
-                tonumber(Settings.BoxThickness) or 1
+                tonumber(StyleSettings.BoxThickness) or 1
             )
 
         local Ratio =
             math.clamp(
-                tonumber(Settings.CornerRatio) or 0.25,
+                tonumber(StyleSettings.CornerRatio) or 0.25,
                 0.05,
                 0.50
             )
@@ -1072,7 +1086,7 @@ function ESP.Init(Config)
         -- BOUNDS
         -----------------------------------------------------
 
-        local Bounds = GetCharacterBounds(Data, Camera, Root)
+        local Bounds = GetCharacterBounds(Data, Camera, Root, Settings)
 
         if not Bounds then
             HideEntity(Data)
@@ -1164,7 +1178,8 @@ function ESP.Init(Config)
                 Data,
                 BoxWidth,
                 BoxHeight,
-                BoxColor
+                BoxColor,
+                Settings
             )
         elseif BoxEnabled then
             if State.CornersVisible ~= false then
@@ -1255,6 +1270,540 @@ function ESP.Init(Config)
         end
     end
 
+
+    ---------------------------------------------------------
+    -- CORPSE ESP
+    ---------------------------------------------------------
+
+    local function CreateCorpseVisuals(Corpse)
+        local Box = Instance.new("Frame")
+        Box.Name = "CORPSE_" .. Corpse.Name
+        Box.BackgroundTransparency = 1
+        Box.BorderSizePixel = 0
+        Box.Visible = false
+        Box.ZIndex = 10
+        Box.Parent = ScreenGui
+
+        local CorpseColor =
+            CorpseSettings.Color
+            or Color3.fromRGB(255, 190, 90)
+
+        local Stroke = Instance.new("UIStroke")
+        Stroke.Color = CorpseColor
+        Stroke.Thickness = CorpseSettings.BoxThickness or 1
+        Stroke.LineJoinMode = Enum.LineJoinMode.Miter
+        Stroke.Enabled = false
+        Stroke.Parent = Box
+
+        local Corners = {}
+
+        for Index = 1, 8 do
+            local Line = Instance.new("Frame")
+            Line.Name = "Corner" .. Index
+            Line.BorderSizePixel = 0
+            Line.BackgroundColor3 = CorpseColor
+            Line.Visible = false
+            Line.ZIndex = 11
+            Line.Parent = Box
+            Corners[Index] = Line
+        end
+
+        local Name = CreateText()
+        Name.Text = "[CORPSE] " .. Corpse.Name
+
+        local Distance = CreateText()
+
+        return {
+            Box = Box,
+            Stroke = Stroke,
+            Corners = Corners,
+            Name = Name,
+            Distance = Distance,
+        }
+    end
+
+    local function HideCorpse(Data)
+        if not Data or not Data.Visuals or Data.Hidden then
+            return
+        end
+
+        Data.Hidden = true
+
+        local Visuals = Data.Visuals
+        Visuals.Box.Visible = false
+        Visuals.Name.Visible = false
+        Visuals.Distance.Visible = false
+
+        table.clear(Data.RenderState)
+    end
+
+    local function AddCorpseBodyPart(Data, Object)
+        if
+            not Object:IsA("BasePart")
+            or not BodyPartNames[Object.Name]
+        then
+            return
+        end
+
+        if Object:FindFirstAncestorWhichIsA("Accessory") then
+            return
+        end
+
+        if Object:FindFirstAncestorWhichIsA("Tool") then
+            return
+        end
+
+        Data.BodyParts[Object] = true
+
+        if
+            Object.Name == "Head"
+            or Object.Name == "Head2"
+        then
+            Data.Head = Object
+        elseif Object.Name == "UpperTorso" then
+            Data.UpperTorso = Object
+        elseif Object.Name == "LowerTorso" then
+            Data.LowerTorso = Object
+        elseif Object.Name == "Torso" then
+            Data.Torso = Object
+        end
+    end
+
+    local function FindCorpseRoot(Corpse)
+        for _, Name in ipairs({
+            "HumanoidRootPart",
+            "UpperTorso",
+            "LowerTorso",
+            "Torso",
+            "Head2",
+            "Head",
+        }) do
+            local Part = Corpse:FindFirstChild(Name)
+
+            if Part and Part:IsA("BasePart") then
+                return Part
+            end
+        end
+
+        return nil
+    end
+
+    local function AddToCorpseList(Data)
+        local Index = #CorpseList + 1
+        CorpseList[Index] = Data
+        Data.ListIndex = Index
+    end
+
+    local function RemoveFromCorpseList(Data)
+        local Index = Data.ListIndex
+
+        if not Index then
+            return
+        end
+
+        local LastIndex = #CorpseList
+        local LastData = CorpseList[LastIndex]
+
+        CorpseList[LastIndex] = nil
+
+        if Index < LastIndex then
+            CorpseList[Index] = LastData
+            LastData.ListIndex = Index
+        end
+
+        Data.ListIndex = nil
+
+        local Count = #CorpseList
+
+        if Count == 0 then
+            CorpseSchedulerCursor = 1
+            CorpseSchedulerAccumulator = 0
+        elseif CorpseSchedulerCursor > Count then
+            CorpseSchedulerCursor = 1
+        end
+    end
+
+    local function RegisterCorpse(Corpse)
+        if
+            Destroyed
+            or not Corpse
+            or not Corpse:IsA("Model")
+            or CorpseEntities[Corpse]
+        then
+            return
+        end
+
+        local Data = {
+            Character = Corpse,
+            Corpse = Corpse,
+
+            Root = FindCorpseRoot(Corpse),
+
+            Head = nil,
+            UpperTorso = nil,
+            LowerTorso = nil,
+            Torso = nil,
+
+            BodyParts = {},
+            Visuals = CreateCorpseVisuals(Corpse),
+            Connections = {},
+
+            Bounds = {
+                MinX = math.huge,
+                MinY = math.huge,
+                MaxX = -math.huge,
+                MaxY = -math.huge,
+                HasPoint = false,
+                X = 0,
+                Y = 0,
+                Width = 0,
+                Height = 0,
+                CenterX = 0,
+                CenterY = 0,
+            },
+
+            RenderState = {},
+            Hidden = false,
+
+            LastDistanceRounded = nil,
+            DistanceText = "",
+        }
+
+        CorpseEntities[Corpse] = Data
+        AddToCorpseList(Data)
+
+        for _, Object in ipairs(Corpse:GetDescendants()) do
+            AddCorpseBodyPart(Data, Object)
+        end
+
+        Data.Connections.DescendantAdded =
+            Corpse.DescendantAdded:Connect(function(Object)
+                AddCorpseBodyPart(Data, Object)
+
+                if
+                    Object.Name == "HumanoidRootPart"
+                    and Object:IsA("BasePart")
+                then
+                    Data.Root = Object
+                elseif not Data.Root then
+                    Data.Root = FindCorpseRoot(Corpse)
+                end
+            end)
+
+        Data.Connections.DescendantRemoving =
+            Corpse.DescendantRemoving:Connect(function(Object)
+                RemoveBodyPart(Data, Object)
+
+                if Data.Root == Object then
+                    Data.Root = nil
+                    task.defer(function()
+                        if Corpse.Parent then
+                            Data.Root = FindCorpseRoot(Corpse)
+                        end
+                    end)
+                end
+            end)
+
+        HideCorpse(Data)
+    end
+
+    local function UnregisterCorpse(Corpse)
+        local Data = CorpseEntities[Corpse]
+
+        if not Data then
+            return
+        end
+
+        RemoveFromCorpseList(Data)
+
+        for _, Connection in pairs(Data.Connections) do
+            DisconnectConnection(Connection)
+        end
+
+        table.clear(Data.Connections)
+
+        if Data.Visuals then
+            if Data.Visuals.Box then
+                pcall(Data.Visuals.Box.Destroy, Data.Visuals.Box)
+            end
+
+            if Data.Visuals.Name then
+                pcall(Data.Visuals.Name.Destroy, Data.Visuals.Name)
+            end
+
+            if Data.Visuals.Distance then
+                pcall(Data.Visuals.Distance.Destroy, Data.Visuals.Distance)
+            end
+        end
+
+        CorpseEntities[Corpse] = nil
+    end
+
+    local function DisconnectCorpseFolder()
+        for _, Connection in pairs(CorpseFolderConnections) do
+            DisconnectConnection(Connection)
+        end
+
+        table.clear(CorpseFolderConnections)
+
+        local RemoveQueue = {}
+
+        for Corpse in pairs(CorpseEntities) do
+            RemoveQueue[#RemoveQueue + 1] = Corpse
+        end
+
+        for _, Corpse in ipairs(RemoveQueue) do
+            UnregisterCorpse(Corpse)
+        end
+
+        CorpseFolder = nil
+    end
+
+    local function BindCorpseFolder(Folder)
+        if
+            Destroyed
+            or not Folder
+            or CorpseFolder == Folder
+        then
+            return
+        end
+
+        DisconnectCorpseFolder()
+        CorpseFolder = Folder
+
+        for _, Object in ipairs(Folder:GetChildren()) do
+            if Object:IsA("Model") then
+                RegisterCorpse(Object)
+            end
+        end
+
+        CorpseFolderConnections.ChildAdded =
+            Folder.ChildAdded:Connect(function(Object)
+                if Object:IsA("Model") then
+                    RegisterCorpse(Object)
+                end
+            end)
+
+        CorpseFolderConnections.ChildRemoved =
+            Folder.ChildRemoved:Connect(function(Object)
+                UnregisterCorpse(Object)
+            end)
+    end
+
+    local function UpdateCorpse(Data, Camera)
+        local Corpse = Data.Corpse
+
+        if
+            not Corpse
+            or not Corpse.Parent
+            or (
+                CorpseFolder
+                and Corpse.Parent ~= CorpseFolder
+            )
+        then
+            HideCorpse(Data)
+            return
+        end
+
+        local Root = Data.Root
+
+        if not Root or not Root.Parent then
+            Root = FindCorpseRoot(Corpse)
+            Data.Root = Root
+        end
+
+        if not Root then
+            HideCorpse(Data)
+            return
+        end
+
+        local Distance =
+            (
+                Root.Position
+                - Camera.CFrame.Position
+            ).Magnitude
+
+        local MaxDistance =
+            tonumber(CorpseSettings.MaxDistance)
+            or 1000
+
+        if Distance > MaxDistance then
+            HideCorpse(Data)
+            return
+        end
+
+        local Bounds =
+            GetCharacterBounds(
+                Data,
+                Camera,
+                Root,
+                CorpseSettings
+            )
+
+        if not Bounds then
+            HideCorpse(Data)
+            return
+        end
+
+        local DistanceRounded = math.floor(Distance + 0.5)
+
+        if Data.LastDistanceRounded ~= DistanceRounded then
+            Data.LastDistanceRounded = DistanceRounded
+            Data.DistanceText = tostring(DistanceRounded) .. " studs"
+        end
+
+        Data.Hidden = false
+
+        local Visuals = Data.Visuals
+        local State = Data.RenderState
+
+        local CorpseColor =
+            CorpseSettings.Color
+            or Color3.fromRGB(255, 190, 90)
+
+        local TextColor =
+            CorpseSettings.TextColor
+            or Color3.fromRGB(255, 255, 255)
+
+        local BoxWidth = math.floor(Bounds.Width)
+        local BoxHeight = math.floor(Bounds.Height)
+        local BoxX = math.floor(Bounds.X)
+        local BoxY = math.floor(Bounds.Y)
+
+        local BoxEnabled = CorpseSettings.Box == true
+        local CornerStyle =
+            (CorpseSettings.BoxStyle or "Corner")
+            == "Corner"
+
+        if BoxEnabled then
+            if State.BoxX ~= BoxX or State.BoxY ~= BoxY then
+                Visuals.Box.Position = UDim2.fromOffset(BoxX, BoxY)
+                State.BoxX = BoxX
+                State.BoxY = BoxY
+            end
+
+            if
+                State.BoxWidth ~= BoxWidth
+                or State.BoxHeight ~= BoxHeight
+            then
+                Visuals.Box.Size = UDim2.fromOffset(BoxWidth, BoxHeight)
+                State.BoxWidth = BoxWidth
+                State.BoxHeight = BoxHeight
+            end
+        end
+
+        SetVisible(State, "BoxVisible", Visuals.Box, BoxEnabled)
+
+        if BoxEnabled and CornerStyle then
+            if State.StrokeEnabled ~= false then
+                Visuals.Stroke.Enabled = false
+                State.StrokeEnabled = false
+            end
+
+            if State.CornersVisible ~= true then
+                for _, Line in ipairs(Visuals.Corners) do
+                    Line.Visible = true
+                end
+
+                State.CornersVisible = true
+            end
+
+            UpdateCornerBox(
+                Data,
+                BoxWidth,
+                BoxHeight,
+                CorpseColor,
+                CorpseSettings
+            )
+        elseif BoxEnabled then
+            if State.CornersVisible ~= false then
+                for _, Line in ipairs(Visuals.Corners) do
+                    Line.Visible = false
+                end
+
+                State.CornersVisible = false
+            end
+
+            if State.StrokeEnabled ~= true then
+                Visuals.Stroke.Enabled = true
+                State.StrokeEnabled = true
+            end
+
+            local Thickness =
+                tonumber(CorpseSettings.BoxThickness)
+                or 1
+
+            if State.StrokeColor ~= CorpseColor then
+                Visuals.Stroke.Color = CorpseColor
+                State.StrokeColor = CorpseColor
+            end
+
+            if State.StrokeThickness ~= Thickness then
+                Visuals.Stroke.Thickness = Thickness
+                State.StrokeThickness = Thickness
+            end
+        end
+
+        SetTextColor(State, "NameColor", Visuals.Name, TextColor)
+        SetTextColor(State, "DistanceColor", Visuals.Distance, TextColor)
+
+        local ShowName = CorpseSettings.Name == true
+        SetVisible(State, "NameVisible", Visuals.Name, ShowName)
+
+        if ShowName then
+            Visuals.Name.Position =
+                UDim2.fromOffset(
+                    Bounds.CenterX,
+                    Bounds.Y - 12
+                )
+        end
+
+        local ShowDistance = CorpseSettings.Distance == true
+        SetVisible(State, "DistanceVisible", Visuals.Distance, ShowDistance)
+
+        if ShowDistance then
+            SetText(
+                State,
+                "DistanceText",
+                Visuals.Distance,
+                Data.DistanceText
+            )
+
+            Visuals.Distance.Position =
+                UDim2.fromOffset(
+                    Bounds.CenterX,
+                    Bounds.Y + Bounds.Height + 10
+                )
+        end
+    end
+
+    local CorpseFolderName =
+        tostring(
+            CorpseSettings.FolderName
+            or "Corpses"
+        )
+
+    local ExistingCorpseFolder =
+        Workspace:FindFirstChild(CorpseFolderName)
+
+    if ExistingCorpseFolder then
+        BindCorpseFolder(ExistingCorpseFolder)
+    end
+
+    Connections.CorpseFolderAdded =
+        Workspace.ChildAdded:Connect(function(Object)
+            if Object.Name == CorpseFolderName then
+                BindCorpseFolder(Object)
+            end
+        end)
+
+    Connections.CorpseFolderRemoved =
+        Workspace.ChildRemoved:Connect(function(Object)
+            if Object == CorpseFolder then
+                DisconnectCorpseFolder()
+            end
+        end)
+
     ---------------------------------------------------------
     -- TRACK EXISTING PLAYERS
     ---------------------------------------------------------
@@ -1287,20 +1836,34 @@ function ESP.Init(Config)
                 return
             end
 
-            if not Settings.Enabled then
-                if WasEnabled then
-                    for _, Data in ipairs(EntityList) do
-                        HideEntity(Data)
-                    end
+            local PlayersEnabled = Settings.Enabled == true
+            local CorpsesEnabled = CorpseSettings.Enabled == true
 
-                    WasEnabled = false
-                    SchedulerAccumulator = 0
+            if not PlayersEnabled and WasEnabled then
+                for _, Data in ipairs(EntityList) do
+                    HideEntity(Data)
                 end
 
-                return
+                WasEnabled = false
+                SchedulerAccumulator = 0
+            elseif PlayersEnabled then
+                WasEnabled = true
             end
 
-            WasEnabled = true
+            if not CorpsesEnabled and WasCorpsesEnabled then
+                for _, Data in ipairs(CorpseList) do
+                    HideCorpse(Data)
+                end
+
+                WasCorpsesEnabled = false
+                CorpseSchedulerAccumulator = 0
+            elseif CorpsesEnabled then
+                WasCorpsesEnabled = true
+            end
+
+            if not PlayersEnabled and not CorpsesEnabled then
+                return
+            end
 
             local Camera = Workspace.CurrentCamera
 
@@ -1308,45 +1871,84 @@ function ESP.Init(Config)
                 return
             end
 
-            local Count = #EntityList
+            if PlayersEnabled then
+                local Count = #EntityList
 
-            if Count == 0 then
-                SchedulerCursor = 1
-                SchedulerAccumulator = 0
-                return
-            end
-
-            -- At 60 FPS and UpdateFrequency=30 this naturally processes
-            -- roughly half of the entities each rendered frame. At higher
-            -- FPS the budget becomes smaller, keeping each entity near the
-            -- same 30 Hz average without one large 30 Hz spike.
-            SchedulerAccumulator =
-                math.min(
-                    Count,
-                    SchedulerAccumulator
-                    + DeltaTime
-                    * UpdateFrequency
-                    * Count
-                )
-
-            local Budget = math.floor(SchedulerAccumulator)
-
-            if Budget < 1 then
-                return
-            end
-
-            SchedulerAccumulator -= Budget
-
-            for _ = 1, Budget do
-                if SchedulerCursor > Count then
+                if Count == 0 then
                     SchedulerCursor = 1
+                    SchedulerAccumulator = 0
+                else
+                    SchedulerAccumulator =
+                        math.min(
+                            Count,
+                            SchedulerAccumulator
+                            + DeltaTime
+                            * UpdateFrequency
+                            * Count
+                        )
+
+                    local Budget = math.floor(SchedulerAccumulator)
+
+                    if Budget > 0 then
+                        SchedulerAccumulator -= Budget
+
+                        for _ = 1, Budget do
+                            if SchedulerCursor > Count then
+                                SchedulerCursor = 1
+                            end
+
+                            local Data = EntityList[SchedulerCursor]
+                            SchedulerCursor += 1
+
+                            if Data then
+                                UpdateEntity(Data, Camera)
+                            end
+                        end
+                    end
                 end
+            end
 
-                local Data = EntityList[SchedulerCursor]
-                SchedulerCursor += 1
+            if CorpsesEnabled then
+                local Count = #CorpseList
 
-                if Data then
-                    UpdateEntity(Data, Camera)
+                if Count == 0 then
+                    CorpseSchedulerCursor = 1
+                    CorpseSchedulerAccumulator = 0
+                else
+                    CorpseSchedulerAccumulator =
+                        math.min(
+                            Count,
+                            CorpseSchedulerAccumulator
+                            + DeltaTime
+                            * UpdateFrequency
+                            * Count
+                        )
+
+                    local Budget =
+                        math.floor(
+                            CorpseSchedulerAccumulator
+                        )
+
+                    if Budget > 0 then
+                        CorpseSchedulerAccumulator -= Budget
+
+                        for _ = 1, Budget do
+                            if CorpseSchedulerCursor > Count then
+                                CorpseSchedulerCursor = 1
+                            end
+
+                            local Data =
+                                CorpseList[
+                                    CorpseSchedulerCursor
+                                ]
+
+                            CorpseSchedulerCursor += 1
+
+                            if Data then
+                                UpdateCorpse(Data, Camera)
+                            end
+                        end
+                    end
                 end
             end
         end)
@@ -1367,6 +1969,10 @@ function ESP.Init(Config)
 
     function Controller.GetLocalEntity()
         return LocalPlayer.Character
+    end
+
+    function Controller.GetCorpseCount()
+        return #CorpseList
     end
 
     function Controller.Destroy()
@@ -1405,6 +2011,10 @@ function ESP.Init(Config)
         end
 
         table.clear(EntityList)
+
+        DisconnectCorpseFolder()
+        table.clear(CorpseEntities)
+        table.clear(CorpseList)
 
         if ScreenGui then
             pcall(ScreenGui.Destroy, ScreenGui)
