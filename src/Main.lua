@@ -79,6 +79,7 @@ end
 local Bundled = Environment.NEWZ_BUNDLE
 
 local Config
+local ProfilerModule
 local ESPModule
 local UIModule
 local NeverLose
@@ -86,6 +87,7 @@ local SourceRef
 
 if type(Bundled) == "table" then
     Config = Bundled.Config
+    ProfilerModule = Bundled.ProfilerModule
     ESPModule = Bundled.ESPModule
     UIModule = Bundled.UIModule
     NeverLose = Bundled.NeverLose
@@ -94,12 +96,18 @@ else
     SourceRef = ResolveSourceRef()
 
     Config = LoadModuleFromRef(SourceRef, "src/Config.lua")
+    ProfilerModule = LoadModuleFromRef(SourceRef, "src/Core/Profiler.lua")
     ESPModule = LoadModuleFromRef(SourceRef, "src/Modules/ESP.lua")
     UIModule = LoadModuleFromRef(SourceRef, "src/Ui.lua")
     NeverLose = LoadModuleFromRef(SourceRef, "vendor/NeverLose.lua")
 end
 
 assert(type(Config) == "table", "Config.lua nao retornou uma tabela")
+assert(
+    type(ProfilerModule) == "table"
+    and type(ProfilerModule.Init) == "function",
+    "Profiler.lua invalido"
+)
 assert(
     type(ESPModule) == "table" and type(ESPModule.Init) == "function",
     "ESP.lua invalido"
@@ -117,11 +125,20 @@ if Environment.NEWZ and type(Environment.NEWZ.Destroy) == "function" then
     pcall(Environment.NEWZ.Destroy)
 end
 
+local Profiler
 local ESP
 local UI
 
 local InitSuccess, InitError = xpcall(function()
-    ESP = ESPModule.Init(Config)
+    Profiler = ProfilerModule.Init(Config)
+    assert(
+        type(Profiler) == "table",
+        "Profiler.Init nao retornou um controller"
+    )
+
+    ESP = ESPModule.Init(Config, {
+        Profiler = Profiler,
+    })
     assert(type(ESP) == "table", "ESP.Init nao retornou um controller")
 
     UI = UIModule.Init(Config, {
@@ -133,6 +150,7 @@ end, Traceback)
 if not InitSuccess then
     CleanupController(UI)
     CleanupController(ESP)
+    CleanupController(Profiler)
 
     error(
         "Falha ao inicializar Newz:\n" .. tostring(InitError),
@@ -142,6 +160,7 @@ end
 
 local Project = {
     Config = Config,
+    Profiler = Profiler,
     ESP = ESP,
     UI = UI,
     SourceRef = SourceRef,
@@ -158,12 +177,15 @@ function Project.Destroy()
 
     CleanupController(UI)
     CleanupController(ESP)
+    CleanupController(Profiler)
 
     UI = nil
     ESP = nil
+    Profiler = nil
 
     Project.UI = nil
     Project.ESP = nil
+    Project.Profiler = nil
 
     if Environment.NEWZ == Project then
         Environment.NEWZ = nil

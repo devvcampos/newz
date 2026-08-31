@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.3.0",
+    Version = "0.3.1",
 }
 
 Config.Runtime = {
@@ -18,6 +18,12 @@ Config.UI = {
 
     AccentColor = Color3.fromRGB(17, 238, 253),
     Watermark = true,
+}
+
+Config.Profiler = {
+    Enabled = false,
+    Overlay = true,
+    ReportInterval = 1.0,
 }
 
 Config.ESP = {

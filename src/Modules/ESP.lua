@@ -1,6 +1,6 @@
 local ESP = {}
 
-function ESP.Init(Config)
+function ESP.Init(Config, Dependencies)
     ---------------------------------------------------------
     -- SERVICES / CONFIG
     ---------------------------------------------------------
@@ -13,6 +13,42 @@ function ESP.Init(Config)
     local Settings = Config.ESP
     local CorpseSettings = Config.Corpses or {}
     local Runtime = Config.Runtime or {}
+
+    local Profiler =
+        Dependencies
+        and Dependencies.Profiler
+        or nil
+
+    local ProfileBegin =
+        Profiler
+        and Profiler.Begin
+        or function()
+            return nil
+        end
+
+    local ProfileFinish =
+        Profiler
+        and Profiler.Finish
+        or function()
+        end
+
+    local ProfileCount =
+        Profiler
+        and Profiler.Count
+        or function()
+        end
+
+    local ProfileGauge =
+        Profiler
+        and Profiler.SetGauge
+        or function()
+        end
+
+    local ProfileFrame =
+        Profiler
+        and Profiler.Frame
+        or function()
+        end
 
     assert(LocalPlayer, "ESP precisa ser inicializado no cliente")
 
@@ -1086,7 +1122,23 @@ function ESP.Init(Config)
         -- BOUNDS
         -----------------------------------------------------
 
-        local Bounds = GetCharacterBounds(Data, Camera, Root, Settings)
+        local BoundsStart =
+            ProfileBegin(
+                "Players.Bounds"
+            )
+
+        local Bounds =
+            GetCharacterBounds(
+                Data,
+                Camera,
+                Root,
+                Settings
+            )
+
+        ProfileFinish(
+            "Players.Bounds",
+            BoundsStart
+        )
 
         if not Bounds then
             HideEntity(Data)
@@ -1097,7 +1149,23 @@ function ESP.Init(Config)
         -- VISIBILITY / COLORS
         -----------------------------------------------------
 
-        local Visible = IsEntityVisible(Data, Camera, Root)
+        local VisibilityStart =
+            ProfileBegin(
+                "Players.Visibility"
+            )
+
+        local Visible =
+            IsEntityVisible(
+                Data,
+                Camera,
+                Root
+            )
+
+        ProfileFinish(
+            "Players.Visibility",
+            VisibilityStart
+        )
+
         local VisibleColor = Settings.VisibleColor or Color3.fromRGB(90, 255, 130)
         local HiddenColor = Settings.HiddenColor or Color3.fromRGB(255, 90, 90)
 
@@ -1109,6 +1177,11 @@ function ESP.Init(Config)
 
         local TextColor = Settings.TextColor or Color3.new(1, 1, 1)
         UpdateHealthCache(Data, Humanoid, TextColor)
+
+        local VisualStart =
+            ProfileBegin(
+                "Players.Visuals"
+            )
 
         -----------------------------------------------------
         -- DISTANCE TEXT CACHE
@@ -1268,6 +1341,11 @@ function ESP.Init(Config)
             SetText(State, "DistanceText", Visuals.Distance, Data.DistanceText)
             Visuals.Distance.Position = UDim2.fromOffset(Bounds.CenterX, NextY)
         end
+
+        ProfileFinish(
+            "Players.Visuals",
+            VisualStart
+        )
     end
 
 
@@ -1632,6 +1710,11 @@ function ESP.Init(Config)
             return
         end
 
+        local BoundsStart =
+            ProfileBegin(
+                "Corpses.Bounds"
+            )
+
         local Bounds =
             GetCharacterBounds(
                 Data,
@@ -1640,10 +1723,20 @@ function ESP.Init(Config)
                 CorpseSettings
             )
 
+        ProfileFinish(
+            "Corpses.Bounds",
+            BoundsStart
+        )
+
         if not Bounds then
             HideCorpse(Data)
             return
         end
+
+        local VisualStart =
+            ProfileBegin(
+                "Corpses.Visuals"
+            )
 
         local DistanceRounded = math.floor(Distance + 0.5)
 
@@ -1775,6 +1868,11 @@ function ESP.Init(Config)
                     Bounds.Y + Bounds.Height + 10
                 )
         end
+
+        ProfileFinish(
+            "Corpses.Visuals",
+            VisualStart
+        )
     end
 
     local CorpseFolderName =
@@ -1836,6 +1934,25 @@ function ESP.Init(Config)
                 return
             end
 
+            ProfileFrame(
+                DeltaTime
+            )
+
+            ProfileGauge(
+                "PlayersTracked",
+                #EntityList
+            )
+
+            ProfileGauge(
+                "CorpsesTracked",
+                #CorpseList
+            )
+
+            local RenderStart =
+                ProfileBegin(
+                    "Newz.Render"
+                )
+
             local PlayersEnabled = Settings.Enabled == true
             local CorpsesEnabled = CorpseSettings.Enabled == true
 
@@ -1862,12 +1979,22 @@ function ESP.Init(Config)
             end
 
             if not PlayersEnabled and not CorpsesEnabled then
+                ProfileFinish(
+                    "Newz.Render",
+                    RenderStart
+                )
+
                 return
             end
 
             local Camera = Workspace.CurrentCamera
 
             if not Camera then
+                ProfileFinish(
+                    "Newz.Render",
+                    RenderStart
+                )
+
                 return
             end
 
@@ -1901,9 +2028,27 @@ function ESP.Init(Config)
                             SchedulerCursor += 1
 
                             if Data then
-                                UpdateEntity(Data, Camera)
+                                local UpdateStart =
+                                    ProfileBegin(
+                                        "Players.Update"
+                                    )
+
+                                UpdateEntity(
+                                    Data,
+                                    Camera
+                                )
+
+                                ProfileFinish(
+                                    "Players.Update",
+                                    UpdateStart
+                                )
                             end
                         end
+
+                        ProfileCount(
+                            "PlayerUpdates",
+                            Budget
+                        )
                     end
                 end
             end
@@ -1945,12 +2090,35 @@ function ESP.Init(Config)
                             CorpseSchedulerCursor += 1
 
                             if Data then
-                                UpdateCorpse(Data, Camera)
+                                local UpdateStart =
+                                    ProfileBegin(
+                                        "Corpses.Update"
+                                    )
+
+                                UpdateCorpse(
+                                    Data,
+                                    Camera
+                                )
+
+                                ProfileFinish(
+                                    "Corpses.Update",
+                                    UpdateStart
+                                )
                             end
                         end
+
+                        ProfileCount(
+                            "CorpseUpdates",
+                            Budget
+                        )
                     end
                 end
             end
+
+            ProfileFinish(
+                "Newz.Render",
+                RenderStart
+            )
         end)
 
     ---------------------------------------------------------

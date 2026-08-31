@@ -11,6 +11,7 @@ REQUIRED = [
     ROOT / "src" / "Main.lua",
     ROOT / "src" / "Config.lua",
     ROOT / "src" / "Ui.lua",
+    ROOT / "src" / "Core" / "Profiler.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
     ROOT / "vendor" / "NeverLose.lua",
     ROOT / "scripts" / "build.py",

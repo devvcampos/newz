@@ -9,6 +9,7 @@ DIST = ROOT / "dist" / "newz.lua"
 SOURCES = {
     "Main": ROOT / "src" / "Main.lua",
     "Config": ROOT / "src" / "Config.lua",
+    "Profiler": ROOT / "src" / "Core" / "Profiler.lua",
     "ESP": ROOT / "src" / "Modules" / "ESP.lua",
     "UI": ROOT / "src" / "Ui.lua",
     "NeverLose": ROOT / "vendor" / "NeverLose.lua",
@@ -48,7 +49,7 @@ def fingerprint(sources: dict[str, str]) -> str:
 
 def build_bundle(sources: dict[str, str]) -> str:
     entries = []
-    for name in ("Main", "Config", "ESP", "UI", "NeverLose"):
+    for name in ("Main", "Config", "Profiler", "ESP", "UI", "NeverLose"):
         entries.append(f"    {name} = {long_string(sources[name])},")
 
     joined_entries = "\n".join(entries)
@@ -105,12 +106,14 @@ end
 local PreviousBundle = Environment.NEWZ_BUNDLE
 
 local Config = Execute("Config")
+local ProfilerModule = Execute("Profiler")
 local ESPModule = Execute("ESP")
 local UIModule = Execute("UI")
 local NeverLose = Execute("NeverLose")
 
 Environment.NEWZ_BUNDLE = {{
     Config = Config,
+    ProfilerModule = ProfilerModule,
     ESPModule = ESPModule,
     UIModule = UIModule,
     NeverLose = NeverLose,

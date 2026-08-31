@@ -521,6 +521,49 @@ function UI.Init(Config, Dependencies)
             end,
         })
 
+        local DiagnosticsSection = SettingsTab:AddSection({
+            Name = "Diagnostics",
+            Position = "right",
+        })
+
+        AddToggle(
+            DiagnosticsSection,
+            "Profiler",
+            "profiler_enabled",
+            Config.Profiler.Enabled,
+            function(Value)
+                Config.Profiler.Enabled = Value
+            end
+        )
+
+        AddToggle(
+            DiagnosticsSection,
+            "Profiler Overlay",
+            "profiler_overlay",
+            Config.Profiler.Overlay,
+            function(Value)
+                Config.Profiler.Overlay = Value
+            end
+        )
+
+        AddSlider(
+            DiagnosticsSection,
+            "Report Interval",
+            "profiler_report_interval",
+            Config.Profiler.ReportInterval,
+            0.5,
+            3,
+            1,
+            function(Value)
+                Config.Profiler.ReportInterval = Value
+            end
+        )
+
+        DiagnosticsSection:AddLabel(
+            "Measures Newz CPU-side work only",
+            true
+        )
+
         local ProjectSection = SettingsTab:AddSection({
             Name = "Project",
             Position = "left",
