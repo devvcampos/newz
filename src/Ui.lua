@@ -475,6 +475,20 @@ function UI.Init(Config)
 
     AddToggle(
         ESPSection,
+        "Weapon",
+        "esp_weapon",
+        Config.ESP.Weapon,
+        function(Value)
+
+            Config.ESP.Weapon =
+                Value
+
+        end
+    )
+
+
+    AddToggle(
+        ESPSection,
         "Distance",
         "esp_distance",
         Config.ESP.Distance,

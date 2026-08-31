@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.1.1",
+    Version = "0.1.2",
 }
 
 Config.Runtime = {
@@ -34,6 +34,7 @@ Config.ESP = {
     Box = true,
     Name = true,
     Health = true,
+    Weapon = true,
     Distance = true,
 
     -----------------------------------------------------
