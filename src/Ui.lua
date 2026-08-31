@@ -475,29 +475,6 @@ Appearance:
     AddColorPicker({
 
         Name =
-            "Visible Color",
-
-        Flag =
-            "esp_visible_color",
-
-        Default =
-            Config.ESP.VisibleColor,
-
-        Callback =
-            function(Value)
-
-                Config.ESP.VisibleColor =
-                    Value
-
-            end,
-
-    })
-
-
-Appearance:
-    AddColorPicker({
-
-        Name =
             "Hidden Color",
 
         Flag =
