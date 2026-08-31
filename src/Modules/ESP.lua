@@ -389,13 +389,13 @@ function ESP.Init(Config)
             )
 
 
-        Stroke.Color =
-            Settings.BoxColor
-            or Color3.new(
-                1,
-                1,
-                1
-            )
+Stroke.Color =
+    Settings.VisibleColor
+    or Color3.fromRGB(
+        90,
+        255,
+        130
+    )
 
 
         Stroke.Thickness =
@@ -440,13 +440,13 @@ function ESP.Init(Config)
                 0
 
 
-            Line.BackgroundColor3 =
-                Settings.BoxColor
-                or Color3.new(
-                    1,
-                    1,
-                    1
-                )
+Line.BackgroundColor3 =
+    Settings.VisibleColor
+    or Color3.fromRGB(
+        90,
+        255,
+        130
+    )
 
 
             Line.Visible =
@@ -2021,20 +2021,16 @@ function ESP.Init(Config)
             )
 
 
-        -----------------------------------------------------
-        -- BOX COLOR
-        -----------------------------------------------------
-
 -----------------------------------------------------
 -- BOX COLOR
 -----------------------------------------------------
 
-local DefaultBoxColor =
-    Settings.BoxColor
+local VisibleBoxColor =
+    Settings.VisibleColor
     or Color3.fromRGB(
+        90,
         255,
-        255,
-        255
+        130
     )
 
 
@@ -2048,7 +2044,7 @@ local HiddenBoxColor =
 
 
 local BoxColor =
-    DefaultBoxColor
+    VisibleBoxColor
 
 
 -----------------------------------------------------

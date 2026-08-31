@@ -89,10 +89,10 @@ function UI.Init(Config)
         true
 
 
-    if Config.UI.HighlightColor then
+    if Config.UI.AccentColor then
 
         NeverLose.AccentColor =
-            Config.UI.HighlightColor
+            Config.UI.AccentColor
 
     end
 
@@ -595,22 +595,6 @@ function UI.Init(Config)
     )
 
 
-    -- Mantido temporariamente durante a migração.
-    -- Depois que a nova UI estiver estável, podemos remover
-    -- Box Color junto da refatoração de cores do ESP.
-
-    AddColorPicker(
-        AppearanceSection,
-        "Box Color",
-        "esp_box_color",
-        Config.ESP.BoxColor,
-        function(Value)
-
-            Config.ESP.BoxColor =
-                Value
-
-        end
-    )
 
 
     AddColorPicker(

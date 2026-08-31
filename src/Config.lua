@@ -1,8 +1,8 @@
 local Config = {}
 
 Config.Project = {
-    Name = "newz",
-    Version = "0.1.0",
+    Name = "Newz",
+    Version = "0.1.1",
 }
 
 Config.Runtime = {
@@ -18,22 +18,14 @@ Config.UI = {
     ConfigDirectory = "newz",
     ConfigFolder = "Configs",
 
-    HighlightColor =
+    AccentColor =
         Color3.fromRGB(
             17,
             238,
             253
         ),
 
-    AlwaysShowTab = false,
-
-    PerformanceMode = false,
-
     Watermark = true,
-
-    Rainbow = false,
-
-    RainbowSpeed = 0.10,
 }
 
 Config.ESP = {
@@ -58,19 +50,19 @@ Config.ESP = {
 
     BoxStyle = "Corner",
 
-BoxColor =
-    Color3.fromRGB(
-        255,
-        255,
-        255
-    ),
+    VisibleColor =
+        Color3.fromRGB(
+            90,
+            255,
+            130
+        ),
 
-HiddenColor =
-    Color3.fromRGB(
-        255,
-        90,
-        90
-    ),
+    HiddenColor =
+        Color3.fromRGB(
+            255,
+            90,
+            90
+        ),
 
     TextColor =
         Color3.fromRGB(
