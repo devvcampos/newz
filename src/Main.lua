@@ -1,27 +1,51 @@
-local HttpService = game:GetService("HttpService")
+local HttpService =
+    game:GetService(
+        "HttpService"
+    )
 
-local Environment = (getgenv and getgenv()) or _G
+local Environment =
+    (getgenv and getgenv())
+    or _G
 
 local function Traceback(Error)
-    if debug and type(debug.traceback) == "function" then
-        return debug.traceback(tostring(Error), 2)
+    if
+        debug
+        and type(debug.traceback) == "function"
+    then
+        return debug.traceback(
+            tostring(Error),
+            2
+        )
     end
 
     return tostring(Error)
 end
 
 local function CleanupController(Controller)
-    if Controller and type(Controller.Destroy) == "function" then
-        pcall(Controller.Destroy)
+    if
+        Controller
+        and type(Controller.Destroy) == "function"
+    then
+        pcall(
+            Controller.Destroy
+        )
     end
 end
 
-local CacheBust = tostring(DateTime.now().UnixTimestampMillis)
+local CacheBust =
+    tostring(
+        DateTime.now().UnixTimestampMillis
+    )
 
 local function ResolveSourceRef()
-    local ExplicitRef = Environment.NEWZ_SOURCE_REF
+    local ExplicitRef =
+        Environment.NEWZ_SOURCE_REF
 
-    if type(ExplicitRef) == "string" and ExplicitRef ~= "" and ExplicitRef ~= "main" then
+    if
+        type(ExplicitRef) == "string"
+        and ExplicitRef ~= ""
+        and ExplicitRef ~= "main"
+    then
         return ExplicitRef
     end
 
@@ -29,7 +53,12 @@ local function ResolveSourceRef()
         "https://api.github.com/repos/devvcampos/newz/commits/main?cb="
         .. CacheBust
 
-    local Success, Body = pcall(game.HttpGet, game, ApiURL)
+    local Success, Body =
+        pcall(
+            game.HttpGet,
+            game,
+            ApiURL
+        )
 
     assert(
         Success,
@@ -38,7 +67,11 @@ local function ResolveSourceRef()
     )
 
     local DecodeSuccess, Data =
-        pcall(HttpService.JSONDecode, HttpService, Body)
+        pcall(
+            HttpService.JSONDecode,
+            HttpService,
+            Body
+        )
 
     assert(
         DecodeSuccess
@@ -51,109 +84,278 @@ local function ResolveSourceRef()
     return Data.sha
 end
 
-local function LoadModuleFromRef(SourceRef, Path)
+local function LoadModuleFromRef(
+    SourceRef,
+    Path
+)
     local URL =
         "https://raw.githubusercontent.com/devvcampos/newz/"
         .. SourceRef
         .. "/"
         .. Path
 
-    local Source = game:HttpGet(URL)
-    local Chunk, LoadError = loadstring(Source, "@newz/" .. Path)
+    local Source =
+        game:HttpGet(
+            URL
+        )
+
+    local Chunk, LoadError =
+        loadstring(
+            Source,
+            "@newz/" .. Path
+        )
 
     assert(
         Chunk,
-        "Falha ao carregar " .. Path .. ": " .. tostring(LoadError)
+        "Falha ao carregar "
+        .. Path
+        .. ": "
+        .. tostring(LoadError)
     )
 
-    local Success, Result = xpcall(Chunk, Traceback)
+    local Success, Result =
+        xpcall(
+            Chunk,
+            Traceback
+        )
 
     assert(
         Success,
-        "Erro executando " .. Path .. ": " .. tostring(Result)
+        "Erro executando "
+        .. Path
+        .. ": "
+        .. tostring(Result)
     )
 
     return Result
 end
 
-local Bundled = Environment.NEWZ_BUNDLE
+local Bundled =
+    Environment.NEWZ_BUNDLE
 
 local Config
+
 local ProfilerModule
+local BoundsModule
+local VisualsModule
+local SchedulerModule
+
+local PlayerESPModule
+local CorpseESPModule
 local ESPModule
+
 local UIModule
 local NeverLose
+
 local SourceRef
 
 if type(Bundled) == "table" then
     Config = Bundled.Config
+
     ProfilerModule = Bundled.ProfilerModule
+    BoundsModule = Bundled.BoundsModule
+    VisualsModule = Bundled.VisualsModule
+    SchedulerModule = Bundled.SchedulerModule
+
+    PlayerESPModule = Bundled.PlayerESPModule
+    CorpseESPModule = Bundled.CorpseESPModule
     ESPModule = Bundled.ESPModule
+
     UIModule = Bundled.UIModule
     NeverLose = Bundled.NeverLose
+
     SourceRef = "bundle"
 else
-    SourceRef = ResolveSourceRef()
+    SourceRef =
+        ResolveSourceRef()
 
-    Config = LoadModuleFromRef(SourceRef, "src/Config.lua")
-    ProfilerModule = LoadModuleFromRef(SourceRef, "src/Core/Profiler.lua")
-    ESPModule = LoadModuleFromRef(SourceRef, "src/Modules/ESP.lua")
-    UIModule = LoadModuleFromRef(SourceRef, "src/Ui.lua")
-    NeverLose = LoadModuleFromRef(SourceRef, "vendor/NeverLose.lua")
+    Config =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Config.lua"
+        )
+
+    ProfilerModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Core/Profiler.lua"
+        )
+
+    BoundsModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Core/Bounds.lua"
+        )
+
+    VisualsModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Core/Visuals.lua"
+        )
+
+    SchedulerModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Core/Scheduler.lua"
+        )
+
+    PlayerESPModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Modules/PlayerESP.lua"
+        )
+
+    CorpseESPModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Modules/CorpseESP.lua"
+        )
+
+    ESPModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Modules/ESP.lua"
+        )
+
+    UIModule =
+        LoadModuleFromRef(
+            SourceRef,
+            "src/Ui.lua"
+        )
+
+    NeverLose =
+        LoadModuleFromRef(
+            SourceRef,
+            "vendor/NeverLose.lua"
+        )
 end
 
-assert(type(Config) == "table", "Config.lua nao retornou uma tabela")
+assert(
+    type(Config) == "table",
+    "Config.lua nao retornou uma tabela"
+)
+
 assert(
     type(ProfilerModule) == "table"
     and type(ProfilerModule.Init) == "function",
     "Profiler.lua invalido"
 )
+
 assert(
-    type(ESPModule) == "table" and type(ESPModule.Init) == "function",
+    type(BoundsModule) == "table"
+    and type(BoundsModule.New) == "function",
+    "Bounds.lua invalido"
+)
+
+assert(
+    type(VisualsModule) == "table"
+    and type(VisualsModule.New) == "function",
+    "Visuals.lua invalido"
+)
+
+assert(
+    type(SchedulerModule) == "table"
+    and type(SchedulerModule.New) == "function",
+    "Scheduler.lua invalido"
+)
+
+assert(
+    type(PlayerESPModule) == "table"
+    and type(PlayerESPModule.Init) == "function",
+    "PlayerESP.lua invalido"
+)
+
+assert(
+    type(CorpseESPModule) == "table"
+    and type(CorpseESPModule.Init) == "function",
+    "CorpseESP.lua invalido"
+)
+
+assert(
+    type(ESPModule) == "table"
+    and type(ESPModule.Init) == "function",
     "ESP.lua invalido"
 )
+
 assert(
-    type(UIModule) == "table" and type(UIModule.Init) == "function",
+    type(UIModule) == "table"
+    and type(UIModule.Init) == "function",
     "Ui.lua invalido"
 )
+
 assert(
-    type(NeverLose) == "table" and type(NeverLose.CreateWindow) == "function",
+    type(NeverLose) == "table"
+    and type(NeverLose.CreateWindow) == "function",
     "NeverLose invalida"
 )
 
-if Environment.NEWZ and type(Environment.NEWZ.Destroy) == "function" then
-    pcall(Environment.NEWZ.Destroy)
+if
+    Environment.NEWZ
+    and type(Environment.NEWZ.Destroy) == "function"
+then
+    pcall(
+        Environment.NEWZ.Destroy
+    )
 end
 
 local Profiler
-local ESP
-local UI
+local ESPController
+local UIController
 
-local InitSuccess, InitError = xpcall(function()
-    Profiler = ProfilerModule.Init(Config)
-    assert(
-        type(Profiler) == "table",
-        "Profiler.Init nao retornou um controller"
-    )
+local InitSuccess, InitError =
+    xpcall(function()
+        Profiler =
+            ProfilerModule.Init(
+                Config
+            )
 
-    ESP = ESPModule.Init(Config, {
-        Profiler = Profiler,
-    })
-    assert(type(ESP) == "table", "ESP.Init nao retornou um controller")
+        assert(
+            type(Profiler) == "table",
+            "Profiler.Init nao retornou controller"
+        )
 
-    UI = UIModule.Init(Config, {
-        NeverLose = NeverLose,
-    })
-    assert(type(UI) == "table", "UI.Init nao retornou um controller")
-end, Traceback)
+        ESPController =
+            ESPModule.Init(
+                Config,
+                {
+                    Profiler = Profiler,
+
+                    BoundsModule = BoundsModule,
+                    VisualsModule = VisualsModule,
+                    SchedulerModule = SchedulerModule,
+
+                    PlayerESPModule = PlayerESPModule,
+                    CorpseESPModule = CorpseESPModule,
+                }
+            )
+
+        assert(
+            type(ESPController) == "table",
+            "ESP.Init nao retornou controller"
+        )
+
+        UIController =
+            UIModule.Init(
+                Config,
+                {
+                    NeverLose = NeverLose,
+                }
+            )
+
+        assert(
+            type(UIController) == "table",
+            "UI.Init nao retornou controller"
+        )
+    end, Traceback)
 
 if not InitSuccess then
-    CleanupController(UI)
-    CleanupController(ESP)
+    CleanupController(UIController)
+    CleanupController(ESPController)
     CleanupController(Profiler)
 
     error(
-        "Falha ao inicializar Newz:\n" .. tostring(InitError),
+        "Falha ao inicializar Newz:\n"
+        .. tostring(InitError),
         0
     )
 end
@@ -161,8 +363,8 @@ end
 local Project = {
     Config = Config,
     Profiler = Profiler,
-    ESP = ESP,
-    UI = UI,
+    ESP = ESPController,
+    UI = UIController,
     SourceRef = SourceRef,
 }
 
@@ -175,12 +377,12 @@ function Project.Destroy()
 
     ProjectDestroyed = true
 
-    CleanupController(UI)
-    CleanupController(ESP)
+    CleanupController(UIController)
+    CleanupController(ESPController)
     CleanupController(Profiler)
 
-    UI = nil
-    ESP = nil
+    UIController = nil
+    ESPController = nil
     Profiler = nil
 
     Project.UI = nil
@@ -193,4 +395,5 @@ function Project.Destroy()
 end
 
 Environment.NEWZ = Project
+
 return Project

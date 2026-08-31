@@ -6,11 +6,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist" / "newz.lua"
 
+SOURCE_ORDER = (
+    "Main",
+    "Config",
+    "Profiler",
+    "Bounds",
+    "Visuals",
+    "Scheduler",
+    "PlayerESP",
+    "CorpseESP",
+    "ESP",
+    "UI",
+    "NeverLose",
+)
+
 SOURCES = {
     "Main": ROOT / "src" / "Main.lua",
     "Config": ROOT / "src" / "Config.lua",
+
     "Profiler": ROOT / "src" / "Core" / "Profiler.lua",
+    "Bounds": ROOT / "src" / "Core" / "Bounds.lua",
+    "Visuals": ROOT / "src" / "Core" / "Visuals.lua",
+    "Scheduler": ROOT / "src" / "Core" / "Scheduler.lua",
+
+    "PlayerESP": ROOT / "src" / "Modules" / "PlayerESP.lua",
+    "CorpseESP": ROOT / "src" / "Modules" / "CorpseESP.lua",
     "ESP": ROOT / "src" / "Modules" / "ESP.lua",
+
     "UI": ROOT / "src" / "Ui.lua",
     "NeverLose": ROOT / "vendor" / "NeverLose.lua",
 }
@@ -20,37 +42,63 @@ def long_string(text: str) -> str:
     for count in range(32):
         equals = "=" * count
         close = f"]{equals}]"
+
         if close not in text:
             return f"[{equals}[{text}]{equals}]"
-    raise RuntimeError("Could not find a safe Lua long-string delimiter")
+
+    raise RuntimeError(
+        "Could not find a safe Lua long-string delimiter"
+    )
 
 
 def read_sources() -> dict[str, str]:
     result: dict[str, str] = {}
-    for name, path in SOURCES.items():
+
+    for name in SOURCE_ORDER:
+        path = SOURCES[name]
+
         if not path.is_file():
-            raise FileNotFoundError(f"Missing build input: {path}")
-        text = path.read_text(encoding="utf-8")
+            raise FileNotFoundError(
+                f"Missing build input: {path}"
+            )
+
+        text = path.read_text(
+            encoding="utf-8"
+        )
+
         if not text.strip():
-            raise RuntimeError(f"Build input is empty: {path}")
+            raise RuntimeError(
+                f"Build input is empty: {path}"
+            )
+
         result[name] = text
+
     return result
 
 
-def fingerprint(sources: dict[str, str]) -> str:
+def fingerprint(
+    sources: dict[str, str]
+) -> str:
     digest = hashlib.sha256()
+
     for name in sorted(sources):
         digest.update(name.encode("utf-8"))
         digest.update(b"\0")
         digest.update(sources[name].encode("utf-8"))
         digest.update(b"\0")
+
     return digest.hexdigest()
 
 
-def build_bundle(sources: dict[str, str]) -> str:
+def build_bundle(
+    sources: dict[str, str]
+) -> str:
     entries = []
-    for name in ("Main", "Config", "Profiler", "ESP", "UI", "NeverLose"):
-        entries.append(f"    {name} = {long_string(sources[name])},")
+
+    for name in SOURCE_ORDER:
+        entries.append(
+            f"    {name} = {long_string(sources[name])},"
+        )
 
     joined_entries = "\n".join(entries)
     fp = fingerprint(sources)
@@ -90,7 +138,11 @@ local function Execute(Name)
         .. tostring(LoadError)
     )
 
-    local Success, Result = xpcall(Chunk, Traceback)
+    local Success, Result =
+        xpcall(
+            Chunk,
+            Traceback
+        )
 
     assert(
         Success,
@@ -103,27 +155,46 @@ local function Execute(Name)
     return Result
 end
 
-local PreviousBundle = Environment.NEWZ_BUNDLE
+local PreviousBundle =
+    Environment.NEWZ_BUNDLE
 
 local Config = Execute("Config")
+
 local ProfilerModule = Execute("Profiler")
+local BoundsModule = Execute("Bounds")
+local VisualsModule = Execute("Visuals")
+local SchedulerModule = Execute("Scheduler")
+
+local PlayerESPModule = Execute("PlayerESP")
+local CorpseESPModule = Execute("CorpseESP")
 local ESPModule = Execute("ESP")
+
 local UIModule = Execute("UI")
 local NeverLose = Execute("NeverLose")
 
 Environment.NEWZ_BUNDLE = {{
     Config = Config,
+
     ProfilerModule = ProfilerModule,
+    BoundsModule = BoundsModule,
+    VisualsModule = VisualsModule,
+    SchedulerModule = SchedulerModule,
+
+    PlayerESPModule = PlayerESPModule,
+    CorpseESPModule = CorpseESPModule,
     ESPModule = ESPModule,
+
     UIModule = UIModule,
     NeverLose = NeverLose,
 }}
 
-local Success, Result = xpcall(function()
-    return Execute("Main")
-end, Traceback)
+local Success, Result =
+    xpcall(function()
+        return Execute("Main")
+    end, Traceback)
 
-Environment.NEWZ_BUNDLE = PreviousBundle
+Environment.NEWZ_BUNDLE =
+    PreviousBundle
 
 if not Success then
     error(Result, 0)
@@ -137,12 +208,28 @@ def main() -> None:
     sources = read_sources()
     bundle = build_bundle(sources)
 
-    DIST.parent.mkdir(parents=True, exist_ok=True)
-    DIST.write_text(bundle, encoding="utf-8", newline="\n")
+    DIST.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    print(f"Built {DIST.relative_to(ROOT)}")
-    print(f"Fingerprint: {fingerprint(sources)}")
-    print(f"Size: {DIST.stat().st_size:,} bytes")
+    DIST.write_text(
+        bundle,
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    print(
+        f"Built {DIST.relative_to(ROOT)}"
+    )
+
+    print(
+        f"Fingerprint: {fingerprint(sources)}"
+    )
+
+    print(
+        f"Size: {DIST.stat().st_size:,} bytes"
+    )
 
 
 if __name__ == "__main__":

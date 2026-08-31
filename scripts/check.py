@@ -11,10 +11,19 @@ REQUIRED = [
     ROOT / "src" / "Main.lua",
     ROOT / "src" / "Config.lua",
     ROOT / "src" / "Ui.lua",
+
     ROOT / "src" / "Core" / "Profiler.lua",
+    ROOT / "src" / "Core" / "Bounds.lua",
+    ROOT / "src" / "Core" / "Visuals.lua",
+    ROOT / "src" / "Core" / "Scheduler.lua",
+
+    ROOT / "src" / "Modules" / "PlayerESP.lua",
+    ROOT / "src" / "Modules" / "CorpseESP.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
+
     ROOT / "vendor" / "NeverLose.lua",
     ROOT / "scripts" / "build.py",
+
     ROOT / "README.md",
     ROOT / "THIRD_PARTY_NOTICES.md",
 ]
@@ -25,6 +34,7 @@ STALE_TOKENS = {
         "EntityFolderTimeout",
         "PlayersOnly",
     ],
+
     "src/Ui.lua": [
         "EntitiesFolder",
         "EntityFolderTimeout",
@@ -32,57 +42,123 @@ STALE_TOKENS = {
         "Compkiller",
         "CompKiller",
     ],
+
     "README.md": [
         "vendor/Compkiller.lua",
         "pasta configurável do `Workspace`",
     ],
 }
 
+FORBIDDEN_MONOLITH_TOKENS = [
+    "local function RegisterEntity(",
+    "local function RegisterCorpse(",
+    "local function ProjectPartFast(",
+    "local function UpdateCornerBox(",
+]
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "--require-dist",
         action="store_true",
         help="Fail if dist/newz.lua is missing or empty.",
     )
+
     args = parser.parse_args()
 
     failed = False
 
     for path in REQUIRED:
-        if not path.is_file() or not path.read_text(encoding="utf-8").strip():
-            print(f"FAIL missing/empty: {path.relative_to(ROOT)}")
+        if (
+            not path.is_file()
+            or not path.read_text(
+                encoding="utf-8"
+            ).strip()
+        ):
+            print(
+                f"FAIL missing/empty: {path.relative_to(ROOT)}"
+            )
+
             failed = True
 
     for relative, tokens in STALE_TOKENS.items():
         path = ROOT / relative
+
         if not path.is_file():
             continue
-        text = path.read_text(encoding="utf-8")
+
+        text = path.read_text(
+            encoding="utf-8"
+        )
+
         for token in tokens:
             if token in text:
-                print(f"FAIL stale token {token!r} in {relative}")
+                print(
+                    f"FAIL stale token {token!r} in {relative}"
+                )
+
+                failed = True
+
+    facade = (
+        ROOT
+        / "src"
+        / "Modules"
+        / "ESP.lua"
+    )
+
+    if facade.is_file():
+        facade_text = facade.read_text(
+            encoding="utf-8"
+        )
+
+        for token in FORBIDDEN_MONOLITH_TOKENS:
+            if token in facade_text:
+                print(
+                    "FAIL ESP facade contains implementation token "
+                    f"{token!r}"
+                )
+
                 failed = True
 
     dist = ROOT / "dist" / "newz.lua"
+
     if args.require_dist:
-        if not dist.is_file() or not dist.read_text(encoding="utf-8").strip():
-            print("FAIL dist/newz.lua was not generated")
+        if (
+            not dist.is_file()
+            or not dist.read_text(
+                encoding="utf-8"
+            ).strip()
+        ):
+            print(
+                "FAIL dist/newz.lua was not generated"
+            )
+
             failed = True
 
-    analyzer = shutil.which("luau-analyze")
+    analyzer = shutil.which(
+        "luau-analyze"
+    )
+
     if analyzer:
         print("Running luau-analyze...")
+
         result = subprocess.run(
-            [analyzer, "src"],
+            [
+                analyzer,
+                "src",
+            ],
             cwd=ROOT,
             check=False,
         )
+
         if result.returncode != 0:
             failed = True
     else:
-        print("INFO luau-analyze not found; static analysis skipped")
+        print(
+            "INFO luau-analyze not found; static analysis skipped"
+        )
 
     if failed:
         return 1
@@ -92,4 +168,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        main()
+    )

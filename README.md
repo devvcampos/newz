@@ -1,26 +1,27 @@
 # Newz
 
-Ferramenta visual em Luau para diagnóstico autorizado de jogadores em um ambiente Roblox controlado.
+Ferramenta visual em Luau para diagnóstico autorizado de jogadores e entidades em um ambiente Roblox controlado.
 
 ## Estado atual
 
-O Newz rastreia jogadores por `Players.Player.Character`, com suporte a personagens R6/R15 e a experiências com `Workspace.StreamingEnabled` ativo. O ESP mantém o jogador registrado mesmo quando partes físicas são temporariamente removidas do cliente pelo streaming e volta a renderizar quando elas reaparecem.
+A versão `0.4.0` separa o runtime em módulos de responsabilidade única sem alterar o comportamento visual validado na `0.3.2`.
+
+O tracker de jogadores continua baseado em `Players.Player.Character`, com suporte a R6/R15 e `Workspace.StreamingEnabled`. O tracker de cadáveres continua observando `Workspace.Corpses` por eventos.
 
 Recursos atuais:
 
-- box `Corner` ou `Full`;
-- nome;
-- vida;
-- distância;
-- arma equipada;
-- checagem de visibilidade;
-- filtro por time;
-- cores configuráveis para visível, oculto e texto;
-- cor dinâmica de vida.
+- Player ESP com box `Corner` ou `Full`;
+- nome, vida, arma equipada e distância;
+- visibility check e team check;
+- Corpse ESP com box, nome e distância;
+- profiler em tempo real;
+- projection engine calibrada por frame;
+- scheduler round-robin a 30 Hz por entidade;
+- build reproduzível em `dist/newz.lua`.
 
-A identificação de arma equipada usa um `Tool` diretamente no `Player.Character` com `Type == "Gun"` ou `GunBound == true`.
+A identificação da arma equipada continua usando um `Tool` diretamente no `Player.Character` com `Type == "Gun"` ou `GunBound == true`.
 
-## Estrutura
+## Arquitetura
 
 ```text
 newz/
@@ -28,22 +29,61 @@ newz/
 │  ├─ Main.lua
 │  ├─ Config.lua
 │  ├─ Ui.lua
+│  │
+│  ├─ Core/
+│  │  ├─ Profiler.lua
+│  │  ├─ Bounds.lua
+│  │  ├─ Visuals.lua
+│  │  └─ Scheduler.lua
+│  │
 │  └─ Modules/
+│     ├─ PlayerESP.lua
+│     ├─ CorpseESP.lua
 │     └─ ESP.lua
+│
 ├─ vendor/
 │  └─ NeverLose.lua
+│
 ├─ scripts/
 │  ├─ build.py
 │  └─ check.py
+│
 ├─ dist/
 │  └─ newz.lua
+│
 ├─ THIRD_PARTY_NOTICES.md
 └─ README.md
 ```
 
+### Core
+
+`Bounds.lua` concentra cache de partes corporais, root fallback de cadáveres e a projection engine otimizada.
+
+`Visuals.lua` concentra criação, atualização, ocultação e destruição de boxes/textos.
+
+`Scheduler.lua` implementa o round-robin compartilhado usado pelos trackers.
+
+`Profiler.lua` mede custo CPU-side do Newz, incluindo `Newz.Render`, bounds, visibility e visuals.
+
+### Modules
+
+`PlayerESP.lua` é responsável somente pelo lifecycle e renderização dos jogadores, incluindo streaming, humanoid, arma equipada e visibility.
+
+`CorpseESP.lua` é responsável somente pelo lifecycle e renderização de `Workspace.Corpses`.
+
+`ESP.lua` virou um facade/orquestrador. Ele cria o `ScreenGui`, instancia o Core, inicializa Player/Corpse ESP e coordena o `RenderStepped`.
+
+## Projection Engine
+
+A projection engine mantém os mesmos oito cantos por parte usados originalmente, mas evita executar `WorldToViewportPoint` para cada canto.
+
+A câmera é calibrada uma vez por frame com três projeções nativas. Os cantos são então projetados em camera-space. Um caminho legado continua disponível automaticamente para estados de câmera inválidos.
+
+No profiling que motivou essa arquitetura, o custo médio de bounds caiu aproximadamente de `0.33 ms` para `0.04 ms` por atualização de jogador, mantendo o comportamento visual.
+
 ## Carregamento de desenvolvimento
 
-`src/Main.lua` resolve a branch `main` para um SHA de commit uma única vez e carrega `Config`, `ESP`, `Ui` e `NeverLose` usando esse mesmo snapshot imutável. Isso evita misturar arquivos de commits diferentes durante uma execução.
+`src/Main.lua` resolve `main` para um SHA de commit uma única vez e carrega todos os módulos usando o mesmo snapshot imutável.
 
 Também é possível fornecer explicitamente um commit ou tag:
 
@@ -55,33 +95,30 @@ Para distribuição, prefira `dist/newz.lua`.
 
 ## Build
 
-O build gera um artefato único e autocontido. Ele incorpora `Main`, `Config`, `ESP`, `Ui` e `vendor/NeverLose.lua`, portanto a execução do `dist` não depende de downloads mutáveis em runtime.
-
 ```powershell
 python scripts/build.py
 python scripts/check.py --require-dist
 ```
 
-Depois do build, `dist/newz.lua` pode ser versionado como artefato de distribuição.
+O build incorpora Main, Config, Core, Modules, UI e NeverLose em um artefato autocontido.
 
-## Verificação
+## Profiler
 
-`scripts/check.py` valida arquivos obrigatórios, procura configurações antigas conhecidas e, quando `luau-analyze` está instalado no `PATH`, executa a análise estática de `src/`.
+Na interface:
 
-## Configuração de runtime
+```text
+Settings
+└─ Diagnostics
+   ├─ Profiler
+   ├─ Profiler Overlay
+   └─ Report Interval
+```
 
-`Config.Runtime` contém apenas configurações efetivamente usadas pelo tracker atual:
-
-- `UpdateFrequency`: frequência de atualização visual;
-- `VisibilityInterval`: intervalo mínimo entre raycasts de visibilidade por jogador.
-
-## Interface
-
-A interface usa a NeverLose vendorizada em `vendor/NeverLose.lua`. `UI.Init` recebe essa dependência explicitamente e executa a criação da janela/controles dentro de uma transação com cleanup. Se a construção da UI falhar depois que a biblioteca estiver disponível, o código tenta cancelar threads, desconectar recursos temporários e executar `NeverLose:Unload()` antes de propagar o erro.
+O profiler mede trabalho CPU-side do Newz. Ele não representa o custo total de GPU, física, renderização ou scripts internos da experiência.
 
 ## Terceiros
 
-A NeverLose vendorizada declara licença MIT em seu cabeçalho. Consulte `THIRD_PARTY_NOTICES.md` para atribuição e texto da licença.
+A NeverLose vendorizada declara licença MIT em seu cabeçalho. Consulte `THIRD_PARTY_NOTICES.md`.
 
 ## Uso
 
