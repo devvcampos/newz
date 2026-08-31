@@ -322,6 +322,7 @@ function ESP.Init(Config)
 
             Name = CreateText(),
             Health = CreateText(),
+            Weapon = CreateText(),
             Distance = CreateText(),
         }
     end
@@ -345,6 +346,9 @@ function ESP.Init(Config)
             false
 
         Visuals.Health.Visible =
+            false
+
+        Visuals.Weapon.Visible =
             false
 
         Visuals.Distance.Visible =
@@ -417,6 +421,84 @@ function ESP.Init(Config)
     end
 
     ---------------------------------------------------------
+    -- WEAPON TRACKING
+    ---------------------------------------------------------
+
+    local function IsEquippedWeapon(
+        Object,
+        Character
+    )
+
+        if
+            not Object
+            or Object.Parent ~= Character
+            or not Object:IsA(
+                "Tool"
+            )
+        then
+            return false
+        end
+
+        return
+            Object:GetAttribute(
+                "Type"
+            ) == "Gun"
+            or Object:GetAttribute(
+                "GunBound"
+            ) == true
+    end
+
+    local function FindWeapon(
+        Character
+    )
+
+        for _, Object
+            in ipairs(
+                Character:
+                    GetChildren()
+            )
+        do
+
+            if
+                IsEquippedWeapon(
+                    Object,
+                    Character
+                )
+            then
+                return Object
+            end
+        end
+
+        return nil
+    end
+
+    local function RefreshWeapon(
+        Data
+    )
+
+        if
+            not Data
+            or not Data.Character
+            or not Data.Character.Parent
+        then
+            return
+        end
+
+        Data.LastWeaponCheck =
+            os.clock()
+
+        Data.WeaponObject =
+            FindWeapon(
+                Data.Character
+            )
+
+        Data.WeaponName =
+            Data.WeaponObject
+            and Data.WeaponObject.Name
+            or nil
+    end
+
+    ---------------------------------------------------------
     -- ENTITY LIFECYCLE
     ---------------------------------------------------------
 
@@ -450,6 +532,10 @@ function ESP.Init(Config)
 
             BodyParts = {},
 
+            WeaponObject = nil,
+            WeaponName = nil,
+            LastWeaponCheck = 0,
+
             Visuals =
                 CreateVisuals(
                     Player
@@ -481,6 +567,10 @@ function ESP.Init(Config)
             )
         end
 
+        RefreshWeapon(
+            Data
+        )
+
         -----------------------------------------------------
         -- STREAMING IN
         -----------------------------------------------------
@@ -507,6 +597,45 @@ function ESP.Init(Config)
                         Object
                     ] =
                         nil
+                end)
+
+        -----------------------------------------------------
+        -- EQUIPPED TOOL LIFECYCLE
+        -----------------------------------------------------
+
+        Data.Connections.ChildAdded =
+            Character.ChildAdded:
+                Connect(function(Object)
+
+                    if
+                        Object:IsA(
+                            "Tool"
+                        )
+                    then
+
+                        task.defer(
+                            RefreshWeapon,
+                            Data
+                        )
+                    end
+                end)
+
+        Data.Connections.ChildRemoved =
+            Character.ChildRemoved:
+                Connect(function(Object)
+
+                    if
+                        Object == Data.WeaponObject
+                        or Object:IsA(
+                            "Tool"
+                        )
+                    then
+
+                        task.defer(
+                            RefreshWeapon,
+                            Data
+                        )
+                    end
                 end)
     end
 
@@ -554,6 +683,7 @@ function ESP.Init(Config)
                 in ipairs({
                     "Name",
                     "Health",
+                    "Weapon",
                     "Distance",
                 })
             do
@@ -1278,6 +1408,27 @@ function ESP.Init(Config)
         end
 
         -----------------------------------------------------
+        -- WEAPON REFRESH FALLBACK
+        -----------------------------------------------------
+
+        if
+            (
+                not Data.WeaponObject
+                or Data.WeaponObject.Parent
+                    ~= Character
+            )
+            and (
+                os.clock()
+                - Data.LastWeaponCheck
+            ) >= 0.50
+        then
+
+            RefreshWeapon(
+                Data
+            )
+        end
+
+        -----------------------------------------------------
         -- DISTANCE
         -----------------------------------------------------
 
@@ -1460,6 +1611,9 @@ function ESP.Init(Config)
         Visuals.Name.TextColor3 =
             TextColor
 
+        Visuals.Weapon.TextColor3 =
+            TextColor
+
         Visuals.Distance.TextColor3 =
             TextColor
 
@@ -1531,6 +1685,19 @@ function ESP.Init(Config)
                     Humanoid.MaxHealth
                 )
             )
+        )
+
+        local WeaponName =
+            Data.WeaponName
+
+        PlaceBottomText(
+            Visuals.Weapon,
+            Settings.Weapon == true
+                and type(
+                    WeaponName
+                ) == "string"
+                and WeaponName ~= "",
+            WeaponName or ""
         )
 
         PlaceBottomText(
