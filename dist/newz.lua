@@ -23,77 +23,204 @@ local Sources = {
 
 local Key = "8fffe6a50b6407ef788c8b4c3f4ff121"
 
--- Decodificador interno: Converte Hex de volta para código Lua
-local function Decode(HexStr)
-    local content = ""
-    local keyLength = #Key
-    local index = 1
+local BXor =
+    bit32
+    and bit32.bxor
 
-    for i = 1, #HexStr, 2 do
-        local byteValue = tonumber(HexStr:sub(i, i+1), 16)
-        local keyByte = string.byte(Key, index)
-        content = content .. string.char(byteValue ~ keyByte)
-        index = (index % keyLength) + 1
+assert(
+    type(BXor) == "function",
+    "Newz bundle requires bit32.bxor"
+)
+
+local function Decode(HexStr)
+    local Output =
+        table.create(
+            math.floor(
+                #HexStr / 2
+            )
+        )
+
+    local KeyLength =
+        #Key
+
+    local KeyIndex =
+        1
+
+    local OutputIndex =
+        1
+
+    for I = 1, #HexStr, 2 do
+        local ByteValue =
+            tonumber(
+                HexStr:sub(
+                    I,
+                    I + 1
+                ),
+                16
+            )
+
+        assert(
+            ByteValue ~= nil,
+            "Invalid hexadecimal bundle data"
+        )
+
+        local KeyByte =
+            string.byte(
+                Key,
+                KeyIndex
+            )
+
+        Output[OutputIndex] =
+            string.char(
+                BXor(
+                    ByteValue,
+                    KeyByte
+                )
+            )
+
+        OutputIndex += 1
+        KeyIndex =
+            (KeyIndex % KeyLength)
+            + 1
     end
 
-    return content
+    return table.concat(
+        Output
+    )
 end
 
 local function Traceback(Error)
-    if debug and type(debug.traceback) == "function" then
-        return debug.traceback(tostring(Error), 2)
+    if
+        debug
+        and type(debug.traceback) == "function"
+    then
+        return debug.traceback(
+            tostring(Error),
+            2
+        )
     end
+
     return tostring(Error)
 end
 
 local function Execute(Name)
-    -- Descriptografa o código na hora da execução
-    local Source = Decode(Sources[Name])
-    local Chunk, LoadError = loadstring(Source, "@newz/bundle/" .. Name)
+    local Encoded =
+        Sources[Name]
 
-    assert(Chunk, "Falha ao carregar bundle " .. Name .. ": " .. tostring(LoadError))
+    assert(
+        type(Encoded) == "string",
+        "Missing bundle source: "
+        .. tostring(Name)
+    )
 
-    local Success, Result = xpcall(Chunk, Traceback)
-    assert(Success, "Erro executando bundle " .. Name .. ": " .. tostring(Result))
+    local Source =
+        Decode(
+            Encoded
+        )
+
+    local Chunk,
+        LoadError =
+            loadstring(
+                Source,
+                "@newz/bundle/"
+                .. Name
+            )
+
+    assert(
+        Chunk,
+        "Falha ao carregar bundle "
+        .. Name
+        .. ": "
+        .. tostring(LoadError)
+    )
+
+    local Success,
+        Result =
+            xpcall(
+                Chunk,
+                Traceback
+            )
+
+    assert(
+        Success,
+        "Erro executando bundle "
+        .. Name
+        .. ": "
+        .. tostring(Result)
+    )
+
     return Result
 end
 
-local PreviousBundle = Environment.NEWZ_BUNDLE
+local PreviousBundle =
+    Environment.NEWZ_BUNDLE
 
-local Config = Execute("Config")
-local ProfilerModule = Execute("Profiler")
-local BoundsModule = Execute("Bounds")
-local VisualsModule = Execute("Visuals")
-local SchedulerModule = Execute("Scheduler")
-local PlayerESPModule = Execute("PlayerESP")
-local CorpseESPModule = Execute("CorpseESP")
-local CorpseIllusionModule = Execute("CorpseIllusion")
-local ESPModule = Execute("ESP")
-local UIModule = Execute("UI")
-local NeverLose = Execute("NeverLose")
+local Config =
+    Execute("Config")
+
+local ProfilerModule =
+    Execute("Profiler")
+
+local BoundsModule =
+    Execute("Bounds")
+
+local VisualsModule =
+    Execute("Visuals")
+
+local SchedulerModule =
+    Execute("Scheduler")
+
+local PlayerESPModule =
+    Execute("PlayerESP")
+
+local CorpseESPModule =
+    Execute("CorpseESP")
+
+local CorpseIllusionModule =
+    Execute("CorpseIllusion")
+
+local ESPModule =
+    Execute("ESP")
+
+local UIModule =
+    Execute("UI")
+
+local NeverLose =
+    Execute("NeverLose")
 
 Environment.NEWZ_BUNDLE = {
     Config = Config,
+
     ProfilerModule = ProfilerModule,
     BoundsModule = BoundsModule,
     VisualsModule = VisualsModule,
     SchedulerModule = SchedulerModule,
+
     PlayerESPModule = PlayerESPModule,
     CorpseESPModule = CorpseESPModule,
     CorpseIllusionModule = CorpseIllusionModule,
     ESPModule = ESPModule,
+
     UIModule = UIModule,
     NeverLose = NeverLose,
 }
 
-local Success, Result = xpcall(function()
-    return Execute("Main")
-end, Traceback)
+local Success,
+    Result =
+        xpcall(function()
+            return Execute(
+                "Main"
+            )
+        end, Traceback)
 
-Environment.NEWZ_BUNDLE = PreviousBundle
+Environment.NEWZ_BUNDLE =
+    PreviousBundle
 
 if not Success then
-    error(Result, 0)
+    error(
+        Result,
+        0
+    )
 end
 
 return Result
