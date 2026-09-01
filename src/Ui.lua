@@ -603,6 +603,19 @@ function UI.Init(Config, Dependencies)
             end,
         })
 
+        -- Dentro de CorpseIllusionSection, depois do botão "Go To Corpse"
+
+CorpseIllusionSection:AddButton({
+    Icon = "arrow-down-to-line",
+    Name = "Trazer Corpo",
+    ToolTip = "Traz o corpo real até você para lootear.",
+    Callback = function()
+        local TargetName = tostring(Config.CorpseIllusion.TargetName or "")
+        local Success, Message = CorpseIllusion.BringCorpseToMe(TargetName)
+        CorpseIllusionStatus:SetText((Success and "Status: " or "Status: erro - ") .. tostring(Message))
+    end,
+})
+
         CorpseIllusionSection:AddButton({
             Icon = "arrow-curl-to-left",
             Name = "Return",
