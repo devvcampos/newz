@@ -22,16 +22,13 @@ function CorpseESP.Init(Config, Dependencies)
     local Bounds = Dependencies.Bounds
     local Visuals = Dependencies.Visuals
     local SchedulerModule = Dependencies.SchedulerModule
-    local LootModule = Dependencies.LootModule
     local Profiler = Dependencies.Profiler
 
     assert(
         Bounds
         and Visuals
         and SchedulerModule
-        and type(SchedulerModule.New) == "function"
-        and LootModule
-        and type(LootModule.New) == "function",
+        and type(SchedulerModule.New) == "function",
         "Dependencias invalidas em CorpseESP"
     )
 
@@ -54,6 +51,12 @@ function CorpseESP.Init(Config, Dependencies)
         or function()
         end
 
+    local ProfileGauge =
+        Profiler
+        and Profiler.SetGauge
+        or function()
+        end
+
     local UpdateFrequency =
         math.clamp(
             tonumber(Runtime.UpdateFrequency) or 30,
@@ -64,14 +67,6 @@ function CorpseESP.Init(Config, Dependencies)
     local Scheduler =
         SchedulerModule.New(
             UpdateFrequency
-        )
-
-    local Loot =
-        LootModule.New(
-            Config,
-            {
-                Profiler = Profiler,
-            }
         )
 
     ---------------------------------------------------------
@@ -99,11 +94,6 @@ function CorpseESP.Init(Config, Dependencies)
     local SchedulerGetCount = Scheduler.GetCount
     local SchedulerDestroy = Scheduler.Destroy
 
-    local LootPrepare = Loot.Prepare
-    local LootSync = Loot.Sync
-    local LootSuspend = Loot.Suspend
-    local LootDestroyData = Loot.DestroyData
-
     local Destroyed = false
     local WasEnabled = false
 
@@ -111,6 +101,11 @@ function CorpseESP.Init(Config, Dependencies)
     local CorpseFolder = nil
     local CorpseFolderConnections = {}
     local Connections = {}
+
+    -- Reused list to avoid allocating a fresh candidate array every refresh.
+    local SelectionCandidates = {}
+    local LastSelectionTime = 0
+    local SelectedCount = 0
 
     local function DisconnectConnection(Connection)
         if Connection then
@@ -122,13 +117,7 @@ function CorpseESP.Init(Config, Dependencies)
     end
 
     local function HideCorpse(Data)
-        VisualHide(
-            Data
-        )
-
-        LootSuspend(
-            Data
-        )
+        VisualHide(Data)
     end
 
     ---------------------------------------------------------
@@ -182,6 +171,9 @@ function CorpseESP.Init(Config, Dependencies)
             RenderState = {},
             Hidden = false,
 
+            Selected = false,
+            SelectionDistanceSquared = math.huge,
+
             LastDistanceRounded = nil,
             DistanceText = "",
         }
@@ -192,7 +184,6 @@ function CorpseESP.Init(Config, Dependencies)
                 {
                     "Name",
                     "Distance",
-                    "Loot",
                 },
                 CorpseColor,
                 TextColor
@@ -201,29 +192,6 @@ function CorpseESP.Init(Config, Dependencies)
         Data.Visuals.Labels.Name.Text =
             "[CORPSE] "
             .. Corpse.Name
-
-        local LootLabel =
-            Data.Visuals.Labels.Loot
-
-        LootLabel.AnchorPoint =
-            Vector2.new(
-                0.5,
-                0
-            )
-
-        LootLabel.TextYAlignment =
-            Enum.TextYAlignment.Top
-
-        LootLabel.Size =
-            UDim2.fromOffset(
-                280,
-                18
-            )
-
-        LootPrepare(
-            Data,
-            Corpse
-        )
 
         CorpseEntities[Corpse] = Data
         SchedulerAdd(Data)
@@ -295,10 +263,6 @@ function CorpseESP.Init(Config, Dependencies)
 
         table.clear(Data.Connections)
 
-        LootDestroyData(
-            Data
-        )
-
         VisualDestroyEntity(Data)
 
         CorpseEntities[Corpse] = nil
@@ -328,6 +292,11 @@ function CorpseESP.Init(Config, Dependencies)
         for _, Corpse in ipairs(RemoveQueue) do
             UnregisterCorpse(Corpse)
         end
+
+        table.clear(SelectionCandidates)
+        SelectedCount = 0
+        LastSelectionTime = 0
+        ProfileGauge("CorpsesSelected", 0)
 
         CorpseFolder = nil
     end
@@ -362,6 +331,124 @@ function CorpseESP.Init(Config, Dependencies)
             Folder.ChildRemoved:Connect(function(Object)
                 UnregisterCorpse(Object)
             end)
+    end
+
+    ---------------------------------------------------------
+    -- ACTIVE CORPSE SELECTION
+    ---------------------------------------------------------
+
+    local function RefreshSelection(CameraPosition)
+        local SelectionStart =
+            ProfileBegin(
+                "Corpses.Selection"
+            )
+
+        table.clear(SelectionCandidates)
+
+        local MaxDistance =
+            tonumber(Settings.MaxDistance)
+            or 500
+
+        local MaxDistanceSquared =
+            MaxDistance * MaxDistance
+
+        for _, Data in pairs(CorpseEntities) do
+            Data.Selected = false
+
+            local Corpse = Data.Corpse
+
+            if
+                Corpse
+                and Corpse.Parent
+                and (
+                    not CorpseFolder
+                    or Corpse.Parent == CorpseFolder
+                )
+            then
+                local Root = Data.Root
+
+                if
+                    not Root
+                    or not Root.Parent
+                then
+                    Root =
+                        BoundsFindCorpseRoot(
+                            Corpse
+                        )
+
+                    Data.Root = Root
+                end
+
+                if Root then
+                    local Offset =
+                        Root.Position
+                        - CameraPosition
+
+                    local DistanceSquared =
+                        Offset:Dot(Offset)
+
+                    if
+                        DistanceSquared
+                        <= MaxDistanceSquared
+                    then
+                        Data.SelectionDistanceSquared =
+                            DistanceSquared
+
+                        SelectionCandidates[
+                            #SelectionCandidates + 1
+                        ] = Data
+                    end
+                end
+            end
+        end
+
+        table.sort(
+            SelectionCandidates,
+            function(A, B)
+                return
+                    A.SelectionDistanceSquared
+                    < B.SelectionDistanceSquared
+            end
+        )
+
+        local MaxCorpses =
+            math.clamp(
+                math.floor(
+                    tonumber(Settings.MaxCorpses)
+                    or 8
+                ),
+                1,
+                100
+            )
+
+        local Limit =
+            math.min(
+                MaxCorpses,
+                #SelectionCandidates
+            )
+
+        for Index = 1, Limit do
+            SelectionCandidates[Index].Selected = true
+        end
+
+        SelectedCount = Limit
+
+        -- Anything outside the active set disappears immediately.
+        for _, Data in pairs(CorpseEntities) do
+            if not Data.Selected then
+                VisualHide(Data)
+            end
+        end
+
+        ProfileGauge(
+            "CorpsesSelected",
+            SelectedCount
+        )
+
+        ProfileFinish(
+            "Corpses.Selection",
+            SelectionStart
+        )
     end
 
     ---------------------------------------------------------
@@ -414,7 +501,7 @@ function CorpseESP.Init(Config, Dependencies)
 
         local MaxDistance =
             tonumber(Settings.MaxDistance)
-            or 1000
+            or 500
 
         if Distance > MaxDistance then
             HideCorpse(Data)
@@ -442,23 +529,6 @@ function CorpseESP.Init(Config, Dependencies)
         if not CharacterBounds then
             HideCorpse(Data)
             return
-        end
-
-        local LootText = ""
-        local LootLineCount = 0
-
-        if
-            Settings.Loot == true
-            or (
-                Data.Loot
-                and Data.Loot.Active
-            )
-        then
-            LootText,
-                LootLineCount =
-                    LootSync(
-                        Data
-                    )
         end
 
         local VisualStart =
@@ -525,13 +595,6 @@ function CorpseESP.Init(Config, Dependencies)
             TextColor
         )
 
-        VisualSetTextColor(
-            State,
-            "LootColor",
-            Labels.Loot,
-            TextColor
-        )
-
         local ShowName =
             Settings.Name == true
 
@@ -549,11 +612,6 @@ function CorpseESP.Init(Config, Dependencies)
                     CharacterBounds.Y - 12
                 )
         end
-
-        local NextY =
-            CharacterBounds.Y
-            + CharacterBounds.Height
-            + 10
 
         local ShowDistance =
             Settings.Distance == true
@@ -576,55 +634,9 @@ function CorpseESP.Init(Config, Dependencies)
             Labels.Distance.Position =
                 UDim2.fromOffset(
                     CharacterBounds.CenterX,
-                    NextY
-                )
-
-            NextY += 17
-        end
-
-        local ShowLoot =
-            Settings.Loot == true
-            and LootText ~= ""
-
-        VisualSetVisible(
-            State,
-            "LootVisible",
-            Labels.Loot,
-            ShowLoot
-        )
-
-        if ShowLoot then
-            VisualSetText(
-                State,
-                "LootText",
-                Labels.Loot,
-                LootText
-            )
-
-            local LootHeight =
-                math.max(
-                    18,
-                    LootLineCount * 16
-                )
-
-            if
-                State.LootHeight
-                ~= LootHeight
-            then
-                Labels.Loot.Size =
-                    UDim2.fromOffset(
-                        280,
-                        LootHeight
-                    )
-
-                State.LootHeight =
-                    LootHeight
-            end
-
-            Labels.Loot.Position =
-                UDim2.fromOffset(
-                    CharacterBounds.CenterX,
-                    NextY
+                    CharacterBounds.Y
+                    + CharacterBounds.Height
+                    + 10
                 )
         end
 
@@ -677,6 +689,10 @@ function CorpseESP.Init(Config, Dependencies)
     local ActiveCameraPosition = nil
 
     local function ProcessScheduledCorpse(Data)
+        if Data.Selected ~= true then
+            return
+        end
+
         local UpdateStart =
             ProfileBegin(
                 "Corpses.Update"
@@ -691,6 +707,11 @@ function CorpseESP.Init(Config, Dependencies)
         ProfileFinish(
             "Corpses.Update",
             UpdateStart
+        )
+
+        ProfileCount(
+            "CorpseUpdates",
+            1
         )
     end
 
@@ -709,11 +730,16 @@ function CorpseESP.Init(Config, Dependencies)
             if WasEnabled then
                 for _, Data in pairs(CorpseEntities) do
                     HideCorpse(Data)
+                    Data.Selected = false
                 end
 
                 SchedulerResetTiming()
                 WasEnabled = false
             end
+
+            LastSelectionTime = 0
+            SelectedCount = 0
+            ProfileGauge("CorpsesSelected", 0)
 
             return 0
         end
@@ -724,11 +750,30 @@ function CorpseESP.Init(Config, Dependencies)
             return 0
         end
 
-        ActiveCamera =
-            Camera
+        ActiveCamera = Camera
+        ActiveCameraPosition = Camera.CFrame.Position
 
-        ActiveCameraPosition =
-            Camera.CFrame.Position
+        local Now = os.clock()
+
+        local SelectionInterval =
+            math.clamp(
+                tonumber(Settings.SelectionInterval)
+                or 0.25,
+                0.10,
+                2
+            )
+
+        if
+            LastSelectionTime == 0
+            or Now - LastSelectionTime
+                >= SelectionInterval
+        then
+            RefreshSelection(
+                ActiveCameraPosition
+            )
+
+            LastSelectionTime = Now
+        end
 
         local Budget =
             SchedulerStep(
@@ -739,18 +784,15 @@ function CorpseESP.Init(Config, Dependencies)
         ActiveCamera = nil
         ActiveCameraPosition = nil
 
-        if Budget > 0 then
-            ProfileCount(
-                "CorpseUpdates",
-                Budget
-            )
-        end
-
         return Budget
     end
 
     function Controller.GetCount()
         return SchedulerGetCount()
+    end
+
+    function Controller.GetSelectedCount()
+        return SelectedCount
     end
 
     function Controller.Destroy()
@@ -768,6 +810,7 @@ function CorpseESP.Init(Config, Dependencies)
 
         DisconnectCorpseFolder()
         table.clear(CorpseEntities)
+        table.clear(SelectionCandidates)
 
         SchedulerDestroy()
     end

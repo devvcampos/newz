@@ -4,16 +4,16 @@ Ferramenta visual em Luau para diagnóstico autorizado de jogadores e entidades 
 
 ## Estado atual
 
-A versão `0.4.1` mantém a arquitetura modular, otimiza os hot paths entre módulos e adiciona visualização event-driven do loot existente em cadáveres.
-
-O tracker de jogadores continua baseado em `Players.Player.Character`, com suporte a R6/R15 e `Workspace.StreamingEnabled`. O tracker de cadáveres continua observando `Workspace.Corpses` por eventos.
+A versão `0.4.2` mantém a arquitetura modular e as otimizações de hot path da `0.4.1`, remove o experimento de Loot ESP e refina o Corpse ESP para reduzir custo e poluição visual.
 
 Recursos atuais:
 
 - Player ESP com box `Corner` ou `Full`;
 - nome, vida, arma equipada e distância;
 - visibility check e team check;
-- Corpse ESP com box, nome, distância e loot opcional;
+- Corpse ESP com box, nome e distância;
+- seleção periódica dos cadáveres mais próximos;
+- limite configurável de cadáveres ativos;
 - profiler em tempo real;
 - projection engine calibrada por frame;
 - scheduler round-robin a 30 Hz por entidade;
@@ -39,7 +39,6 @@ newz/
 │  └─ Modules/
 │     ├─ PlayerESP.lua
 │     ├─ CorpseESP.lua
-│     ├─ LootESP.lua
 │     └─ ESP.lua
 │
 ├─ vendor/
@@ -64,48 +63,49 @@ newz/
 
 `Scheduler.lua` implementa o round-robin compartilhado usado pelos trackers.
 
-`Profiler.lua` mede custo CPU-side do Newz, incluindo `Newz.Render`, bounds, visibility e visuals.
+`Profiler.lua` mede custo CPU-side do Newz, incluindo `Newz.Render`, bounds, visibility, visuals e seleção de cadáveres.
 
 ### Modules
 
-`PlayerESP.lua` é responsável somente pelo lifecycle e renderização dos jogadores, incluindo streaming, humanoid, arma equipada e visibility.
+`PlayerESP.lua` é responsável pelo lifecycle e renderização dos jogadores, incluindo streaming, humanoid, arma equipada e visibility.
 
-`CorpseESP.lua` é responsável somente pelo lifecycle e renderização de `Workspace.Corpses`.
+`CorpseESP.lua` acompanha todos os Models em `Workspace.Corpses`, porém apenas os cadáveres mais próximos dentro de `MaxDistance` entram no conjunto ativo de renderização, limitado por `MaxCorpses`.
 
-`LootESP.lua` observa `Loot_Corpse` somente quando o loot está habilitado e o cadáver está ativo no tracker visual. A lista é atualizada por eventos `ChildAdded`/`ChildRemoved`, sem varredura do Workspace por frame.
+`ESP.lua` funciona como facade/orquestrador. Ele cria o `ScreenGui`, instancia o Core, inicializa Player/Corpse ESP e coordena o `RenderStepped`.
 
-`ESP.lua` virou um facade/orquestrador. Ele cria o `ScreenGui`, instancia o Core, inicializa Player/Corpse ESP e coordena o `RenderStepped`.
+## Corpse selection
+
+Por padrão:
+
+```text
+MaxDistance = 500 studs
+MaxCorpses = 8
+SelectionInterval = 0.25 s
+```
+
+O tracker continua conhecendo todos os cadáveres da pasta, mas a cada intervalo seleciona os mais próximos. Cadáveres fora do conjunto ativo não executam o caminho caro de bounds/visuals.
+
+O profiler diferencia:
+
+```text
+Tracked: players X | corpses Y | active Z
+Corpse select
+Corpse update
+Corpse bounds
+Corpse visuals
+```
 
 ## Hot-path optimization
 
-PlayerESP, CorpseESP e o facade fazem binding local das funções usadas nos loops críticos. O scheduler reutiliza callbacks estáveis em vez de criar closures a cada frame e a posição da câmera é calculada uma vez por `Step`.
+PlayerESP, CorpseESP e o facade fazem binding local das funções usadas nos loops críticos. O scheduler reutiliza callbacks estáveis e a posição da câmera é calculada uma vez por `Step`.
 
-A projection engine também acumula os oito cantos de cada parte usando variáveis locais antes de escrever o resultado de volta no estado de bounds.
-
-## Corpse Loot
-
-O loot é opcional e fica desligado por padrão. Na aba `Corpses`, ative `Loot` e escolha `Loot Max Items`.
-
-O tracker usa por padrão:
-
-```text
-Workspace.Corpses
-└─ <Corpse>
-   └─ Loot_Corpse
-      ├─ <item>
-      ├─ <item>
-      └─ Corpse   # marcador ignorado
-```
-
-Itens repetidos são agrupados (`2x Item`) e o excedente é resumido como `+N items`.
+A projection engine acumula os oito cantos de cada parte usando variáveis locais antes de escrever o resultado de volta no estado de bounds.
 
 ## Projection Engine
 
 A projection engine mantém os mesmos oito cantos por parte usados originalmente, mas evita executar `WorldToViewportPoint` para cada canto.
 
 A câmera é calibrada uma vez por frame com três projeções nativas. Os cantos são então projetados em camera-space. Um caminho legado continua disponível automaticamente para estados de câmera inválidos.
-
-No profiling que motivou essa arquitetura, o custo médio de bounds caiu aproximadamente de `0.33 ms` para `0.04 ms` por atualização de jogador, mantendo o comportamento visual.
 
 ## Carregamento de desenvolvimento
 

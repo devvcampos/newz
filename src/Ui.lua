@@ -398,26 +398,16 @@ function UI.Init(Config, Dependencies)
             end
         )
 
-        AddToggle(
-            CorpsesSection,
-            "Loot",
-            "corpses_loot",
-            Config.Corpses.Loot,
-            function(Value)
-                Config.Corpses.Loot = Value
-            end
-        )
-
         AddSlider(
             CorpsesSection,
-            "Loot Max Items",
-            "corpses_loot_max_items",
-            Config.Corpses.LootMaxItems,
+            "Max Corpses",
+            "corpses_max_corpses",
+            Config.Corpses.MaxCorpses,
             1,
-            10,
+            30,
             0,
             function(Value)
-                Config.Corpses.LootMaxItems = Value
+                Config.Corpses.MaxCorpses = Value
             end
         )
 

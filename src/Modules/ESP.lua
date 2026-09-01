@@ -48,7 +48,6 @@ function ESP.Init(Config, Dependencies)
     local SchedulerModule = Dependencies.SchedulerModule
     local PlayerESPModule = Dependencies.PlayerESPModule
     local CorpseESPModule = Dependencies.CorpseESPModule
-    local LootESPModule = Dependencies.LootESPModule
 
     assert(
         BoundsModule
@@ -80,11 +79,6 @@ function ESP.Init(Config, Dependencies)
         "CorpseESPModule invalido"
     )
 
-    assert(
-        LootESPModule
-        and type(LootESPModule.New) == "function",
-        "LootESPModule invalido"
-    )
 
     local ProfileBegin =
         Profiler
@@ -180,7 +174,6 @@ function ESP.Init(Config, Dependencies)
                         Bounds = Bounds,
                         Visuals = Visuals,
                         SchedulerModule = SchedulerModule,
-                        LootModule = LootESPModule,
                         Profiler = Profiler,
                     }
                 )

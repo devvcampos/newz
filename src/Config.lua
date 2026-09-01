@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.4.1",
+    Version = "0.4.2",
 }
 
 Config.Runtime = {
@@ -62,10 +62,9 @@ Config.Corpses = {
     Name = true,
     Distance = true,
 
-    Loot = false,
-    LootMaxItems = 4,
-    LootContainerName = "Loot_Corpse",
-    LootMarkerName = "Corpse",
+    -- Keep all corpses tracked, but render only the nearest active set.
+    MaxCorpses = 8,
+    SelectionInterval = 0.25,
 
     BoxStyle = "Corner",
 
@@ -76,7 +75,7 @@ Config.Corpses = {
     BoxPadding = 2,
     CornerRatio = 0.25,
 
-    MaxDistance = 1000,
+    MaxDistance = 500,
 }
 
 return Config

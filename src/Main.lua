@@ -142,7 +142,6 @@ local SchedulerModule
 
 local PlayerESPModule
 local CorpseESPModule
-local LootESPModule
 local ESPModule
 
 local UIModule
@@ -160,7 +159,6 @@ if type(Bundled) == "table" then
 
     PlayerESPModule = Bundled.PlayerESPModule
     CorpseESPModule = Bundled.CorpseESPModule
-    LootESPModule = Bundled.LootESPModule
     ESPModule = Bundled.ESPModule
 
     UIModule = Bundled.UIModule
@@ -213,11 +211,6 @@ else
             "src/Modules/CorpseESP.lua"
         )
 
-    LootESPModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Modules/LootESP.lua"
-        )
 
     ESPModule =
         LoadModuleFromRef(
@@ -279,11 +272,6 @@ assert(
     "CorpseESP.lua invalido"
 )
 
-assert(
-    type(LootESPModule) == "table"
-    and type(LootESPModule.New) == "function",
-    "LootESP.lua invalido"
-)
 
 assert(
     type(ESPModule) == "table"
@@ -340,7 +328,6 @@ local InitSuccess, InitError =
 
                     PlayerESPModule = PlayerESPModule,
                     CorpseESPModule = CorpseESPModule,
-                    LootESPModule = LootESPModule,
                 }
             )
 

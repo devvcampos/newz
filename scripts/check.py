@@ -19,7 +19,6 @@ REQUIRED = [
 
     ROOT / "src" / "Modules" / "PlayerESP.lua",
     ROOT / "src" / "Modules" / "CorpseESP.lua",
-    ROOT / "src" / "Modules" / "LootESP.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
 
     ROOT / "vendor" / "NeverLose.lua",
@@ -34,6 +33,9 @@ STALE_TOKENS = {
         "EntitiesFolder",
         "EntityFolderTimeout",
         "PlayersOnly",
+        "LootContainerName",
+        "LootMarkerName",
+        "LootMaxItems",
     ],
 
     "src/Ui.lua": [
@@ -42,11 +44,33 @@ STALE_TOKENS = {
         "PlayersOnly",
         "Compkiller",
         "CompKiller",
+        "corpses_loot",
+        "Loot Max Items",
+    ],
+
+    "src/Main.lua": [
+        "LootESPModule",
+        "src/Modules/LootESP.lua",
+    ],
+
+    "src/Modules/ESP.lua": [
+        "LootESPModule",
+        "LootModule",
+    ],
+
+    "src/Modules/CorpseESP.lua": [
+        "LootModule",
+        "LootPrepare",
+        "LootSync",
+        "LootSuspend",
+        "LootDestroyData",
     ],
 
     "README.md": [
         "vendor/Compkiller.lua",
         "pasta configurável do `Workspace`",
+        "LootESP.lua",
+        "Loot Max Items",
     ],
 }
 

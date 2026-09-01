@@ -142,6 +142,7 @@ function Profiler.Init(Config)
     local function RefreshOverlay()
         local PlayersTracked = Snapshot.Gauges.PlayersTracked or 0
         local CorpsesTracked = Snapshot.Gauges.CorpsesTracked or 0
+        local CorpsesSelected = Snapshot.Gauges.CorpsesSelected or 0
         local PlayerUpdates = Snapshot.Counters.PlayerUpdates or 0
         local CorpseUpdates = Snapshot.Counters.CorpseUpdates or 0
         local Render = Snapshot.Metrics["Newz.Render"]
@@ -169,9 +170,10 @@ function Profiler.Init(Config)
                 FrameShare
             ),
             string.format(
-                "Tracked: players %d | corpses %d",
+                "Tracked: players %d | corpses %d | active %d",
                 PlayersTracked,
-                CorpsesTracked
+                CorpsesTracked,
+                CorpsesSelected
             ),
             string.format(
                 "Updates/s: players %d | corpses %d",
@@ -186,7 +188,7 @@ function Profiler.Init(Config)
             FormatMetric("Corpses.Update", "Corpse update"),
             FormatMetric("Corpses.Bounds", "Corpse bounds"),
             FormatMetric("Corpses.Visuals", "Corpse visuals"),
-            FormatMetric("Corpses.LootRefresh", "Loot refresh"),
+            FormatMetric("Corpses.Selection", "Corpse select"),
         }, "\n")
     end
 
