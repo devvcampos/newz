@@ -32,6 +32,9 @@ function CorpseIllusion.Init(Config)
     local CurrentSourceName = nil
     local LocalContainer = nil
 
+    local ReturnCFrame = nil
+    local CurrentTeleportTarget = nil
+
     local Controller = {}
 
     local function GetCorpseFolder()
@@ -147,6 +150,47 @@ function CorpseIllusion.Init(Config)
 
         return nil,
             "Corpo nao encontrado"
+    end
+
+    local function GetCharacterAndRoot()
+        local Character =
+            LocalPlayer.Character
+
+        local Root =
+            Character
+            and Character:FindFirstChild(
+                "HumanoidRootPart"
+            )
+
+        if
+            not Character
+            or not Root
+            or not Root:IsA("BasePart")
+        then
+            return nil,
+                nil,
+                "Seu personagem nao esta pronto"
+        end
+
+        return Character,
+            Root,
+            nil
+    end
+
+    local function StopCharacterMotion(Character)
+        for _, Object
+            in ipairs(
+                Character:GetDescendants()
+            )
+        do
+            if Object:IsA("BasePart") then
+                Object.AssemblyLinearVelocity =
+                    Vector3.zero
+
+                Object.AssemblyAngularVelocity =
+                    Vector3.zero
+            end
+        end
     end
 
     local function StripLocalInteraction(Clone)
@@ -287,21 +331,14 @@ function CorpseIllusion.Init(Config)
                 "CorpseIllusion foi destruido"
         end
 
-        local Character =
-            LocalPlayer.Character
+        local Character,
+            Root,
+            CharacterError =
+                GetCharacterAndRoot()
 
-        local Root =
-            Character
-            and Character:FindFirstChild(
-                "HumanoidRootPart"
-            )
-
-        if
-            not Root
-            or not Root:IsA("BasePart")
-        then
+        if not Character then
             return false,
-                "Seu personagem nao esta pronto"
+                CharacterError
         end
 
         local Corpse,
@@ -403,6 +440,178 @@ function CorpseIllusion.Init(Config)
             .. Corpse.Name
     end
 
+    function Controller.GoTo(TargetName)
+        if Destroyed then
+            return false,
+                "CorpseIllusion foi destruido"
+        end
+
+        local Character,
+            Root,
+            CharacterError =
+                GetCharacterAndRoot()
+
+        if not Character then
+            return false,
+                CharacterError
+        end
+
+        local Corpse,
+            FindError =
+                FindCorpseByName(
+                    TargetName
+                )
+
+        if not Corpse then
+            return false,
+                FindError
+                or "Corpo nao encontrado"
+        end
+
+        if not ReturnCFrame then
+            ReturnCFrame =
+                Character:GetPivot()
+        end
+
+        local CorpsePivot =
+            Corpse:GetPivot()
+
+        local TeleportDistance =
+            math.clamp(
+                tonumber(
+                    Settings.TeleportDistance
+                )
+                or 4,
+                2,
+                12
+            )
+
+        local TeleportHeight =
+            math.clamp(
+                tonumber(
+                    Settings.TeleportHeight
+                )
+                or 3,
+                0,
+                8
+            )
+
+        local FlatLook =
+            Vector3.new(
+                Root.CFrame.LookVector.X,
+                0,
+                Root.CFrame.LookVector.Z
+            )
+
+        if FlatLook.Magnitude < 0.001 then
+            FlatLook =
+                Vector3.new(
+                    0,
+                    0,
+                    -1
+                )
+        else
+            FlatLook =
+                FlatLook.Unit
+        end
+
+        local CorpsePosition =
+            CorpsePivot.Position
+
+        local TargetPosition =
+            CorpsePosition
+            - FlatLook
+                * TeleportDistance
+            + Vector3.new(
+                0,
+                TeleportHeight,
+                0
+            )
+
+        local LookTarget =
+            Vector3.new(
+                CorpsePosition.X,
+                TargetPosition.Y,
+                CorpsePosition.Z
+            )
+
+        StopCharacterMotion(
+            Character
+        )
+
+        Character:PivotTo(
+            CFrame.lookAt(
+                TargetPosition,
+                LookTarget
+            )
+        )
+
+        StopCharacterMotion(
+            Character
+        )
+
+        CurrentTeleportTarget =
+            Corpse.Name
+
+        Settings.TargetName =
+            Corpse.Name
+
+        return true,
+            "Movido para perto de "
+            .. Corpse.Name
+    end
+
+    function Controller.ReturnToPreviousPosition()
+        if Destroyed then
+            return false,
+                "CorpseIllusion foi destruido"
+        end
+
+        if not ReturnCFrame then
+            return false,
+                "Nenhuma posicao anterior salva"
+        end
+
+        local Character,
+            _,
+            CharacterError =
+                GetCharacterAndRoot()
+
+        if not Character then
+            return false,
+                CharacterError
+        end
+
+        local Destination =
+            ReturnCFrame
+
+        ReturnCFrame = nil
+        CurrentTeleportTarget = nil
+
+        StopCharacterMotion(
+            Character
+        )
+
+        Character:PivotTo(
+            Destination
+        )
+
+        StopCharacterMotion(
+            Character
+        )
+
+        return true,
+            "Posicao restaurada"
+    end
+
+    function Controller.GetTeleportTarget()
+        return CurrentTeleportTarget
+    end
+
+    function Controller.HasReturnPosition()
+        return ReturnCFrame ~= nil
+    end
+
     function Controller.Clear()
         if Destroyed then
             return false,
@@ -434,6 +643,9 @@ function CorpseIllusion.Init(Config)
 
         Destroyed = true
         ClearCurrent()
+
+        ReturnCFrame = nil
+        CurrentTeleportTarget = nil
 
         if LocalContainer then
             pcall(

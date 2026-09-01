@@ -1,0 +1,5 @@
+If you applied the previous discarded Corpse Actions experiment, delete:
+src/Modules/CorpseActions.lua
+server/CorpseActions.server.lua
+
+The 0.4.3 Local Illusion implementation does not use any server script or RemoteFunction.

@@ -31,7 +31,9 @@ function UI.Init(Config, Dependencies)
         type(CorpseIllusion) == "table"
         and type(CorpseIllusion.GetCorpseNames) == "function"
         and type(CorpseIllusion.Show) == "function"
-        and type(CorpseIllusion.Clear) == "function",
+        and type(CorpseIllusion.Clear) == "function"
+        and type(CorpseIllusion.GoTo) == "function"
+        and type(CorpseIllusion.ReturnToPreviousPosition) == "function",
         "CorpseIllusion invalido"
     )
 
@@ -425,7 +427,7 @@ function UI.Init(Config, Dependencies)
         -----------------------------------------------------
 
         local CorpseIllusionSection = CorpsesTab:AddSection({
-            Name = "Local Illusion",
+            Name = "Corpse Actions",
             Position = "left",
         })
 
@@ -500,6 +502,19 @@ function UI.Init(Config, Dependencies)
             end
         )
 
+        AddSlider(
+            CorpseIllusionSection,
+            "Teleport Distance",
+            "corpse_teleport_distance",
+            Config.CorpseIllusion.TeleportDistance,
+            2,
+            12,
+            0,
+            function(Value)
+                Config.CorpseIllusion.TeleportDistance = Value
+            end
+        )
+
         local CorpseIllusionStatus =
             CorpseIllusionSection:AddLabel(
                 "Status: ready",
@@ -557,6 +572,54 @@ function UI.Init(Config, Dependencies)
             Name = "Refresh Corpses",
             Callback = function()
                 RefreshCorpseTargets()
+            end,
+        })
+
+        CorpseIllusionSection:AddButton({
+            Icon = "arrow-right-to-portrait-rectangle",
+            Name = "Go To Corpse",
+            ToolTip = "Moves your local character near the selected corpse.",
+            Callback = function()
+                local TargetName =
+                    tostring(
+                        Config.CorpseIllusion.TargetName
+                        or ""
+                    )
+
+                local Success,
+                    Message =
+                        CorpseIllusion.GoTo(
+                            TargetName
+                        )
+
+                CorpseIllusionStatus:SetText(
+                    (
+                        Success
+                        and "Status: "
+                        or "Status: error - "
+                    )
+                    .. tostring(Message)
+                )
+            end,
+        })
+
+        CorpseIllusionSection:AddButton({
+            Icon = "arrow-curl-to-left",
+            Name = "Return",
+            ToolTip = "Returns to the position saved before Go To Corpse.",
+            Callback = function()
+                local Success,
+                    Message =
+                        CorpseIllusion.ReturnToPreviousPosition()
+
+                CorpseIllusionStatus:SetText(
+                    (
+                        Success
+                        and "Status: "
+                        or "Status: error - "
+                    )
+                    .. tostring(Message)
+                )
             end,
         })
 

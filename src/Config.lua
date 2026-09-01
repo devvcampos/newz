@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.4.3",
+    Version = "0.4.4",
 }
 
 Config.Runtime = {
@@ -59,6 +59,10 @@ Config.CorpseIllusion = {
     -- Position of the visual-only copy relative to the local player.
     Distance = 5,
     VerticalOffset = 0,
+
+    -- Client-side player repositioning used by the Corpse Actions panel.
+    TeleportDistance = 4,
+    TeleportHeight = 3,
 
     -- Local-only container created under Workspace.
     ContainerName = "newz_LocalIllusions",
