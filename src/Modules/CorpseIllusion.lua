@@ -245,6 +245,100 @@ function CorpseIllusion.Init(Config)
         return Result
     end
 
+function Controller.Show(TargetName)
+    if Destroyed then
+        return false, "CorpseIllusion foi destruido"
+    end
+
+    local Character, Root, CharacterError =
+        GetCharacterAndRoot()
+
+    if not Character then
+        return false, CharacterError
+    end
+
+    local Corpse, FindError =
+        FindCorpseByName(TargetName)
+
+    if not Corpse then
+        return false,
+            FindError or "Corpo nao encontrado"
+    end
+
+    local Clone, CloneError =
+        CloneCorpse(Corpse)
+
+    if not Clone then
+        return false, CloneError
+    end
+
+    ClearCurrent()
+    StripLocalInteraction(Clone)
+
+    Clone.Name =
+        "NEWZ_LOCAL_" .. Corpse.Name
+
+    Clone:SetAttribute(
+        "NEWZ_LocalIllusion",
+        true
+    )
+
+    Clone:SetAttribute(
+        "NEWZ_SourceCorpse",
+        Corpse.Name
+    )
+
+    Clone.Parent =
+        EnsureContainer()
+
+    local Distance =
+        math.clamp(
+            tonumber(Settings.Distance) or 5,
+            2,
+            20
+        )
+
+    local VerticalOffset =
+        math.clamp(
+            tonumber(Settings.VerticalOffset) or 0,
+            -5,
+            5
+        )
+
+    local TargetPosition =
+        (
+            Root.CFrame
+            * CFrame.new(
+                0,
+                VerticalOffset,
+                -Distance
+            )
+        ).Position
+
+    local SourcePivot =
+        Corpse:GetPivot()
+
+    local SourceRotation =
+        SourcePivot
+        - SourcePivot.Position
+
+    Clone:PivotTo(
+        CFrame.new(TargetPosition)
+        * SourceRotation
+    )
+
+    CurrentClone = Clone
+    CurrentSourceName = Corpse.Name
+
+    Settings.TargetName =
+        Corpse.Name
+
+    return true,
+        "Ilusao local: "
+        .. Corpse.Name
+end
+
+
     function Controller.GoTo(TargetName)
         -- (mantido, mas agora melhorado com loop de tentativas)
         if Destroyed then return false, "CorpseIllusion foi destruido" end
@@ -298,6 +392,14 @@ function CorpseIllusion.Init(Config)
     function Controller.GetCurrentName()
         return CurrentSourceName
     end
+
+    function Controller.GetTeleportTarget()
+    return CurrentTeleportTarget
+end
+
+function Controller.HasReturnPosition()
+    return ReturnCFrame ~= nil
+end
 
     function Controller.Destroy()
         if Destroyed then return end
