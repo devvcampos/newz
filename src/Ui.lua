@@ -20,10 +20,19 @@ function UI.Init(Config, Dependencies)
     )
 
     local NeverLose = Dependencies.NeverLose
+    local CorpseIllusion = Dependencies.CorpseIllusion
 
     assert(
         type(NeverLose.CreateWindow) == "function",
         "NeverLose invalida"
+    )
+
+    assert(
+        type(CorpseIllusion) == "table"
+        and type(CorpseIllusion.GetCorpseNames) == "function"
+        and type(CorpseIllusion.Show) == "function"
+        and type(CorpseIllusion.Clear) == "function",
+        "CorpseIllusion invalido"
     )
 
     local Destroyed = false
@@ -410,6 +419,193 @@ function UI.Init(Config, Dependencies)
                 Config.Corpses.MaxCorpses = Value
             end
         )
+
+        -----------------------------------------------------
+        -- LOCAL ILLUSION
+        -----------------------------------------------------
+
+        local CorpseIllusionSection = CorpsesTab:AddSection({
+            Name = "Local Illusion",
+            Position = "left",
+        })
+
+        local EmptyTargetValue =
+            "<no corpses>"
+
+        local InitialTargets =
+            CorpseIllusion.GetCorpseNames()
+
+        local InitialValues =
+            InitialTargets
+
+        if #InitialValues == 0 then
+            InitialValues = {
+                EmptyTargetValue,
+            }
+        end
+
+        local InitialTarget =
+            tostring(
+                Config.CorpseIllusion.TargetName
+                or ""
+            )
+
+        if
+            InitialTarget == ""
+            or not table.find(
+                InitialTargets,
+                InitialTarget
+            )
+        then
+            InitialTarget =
+                InitialTargets[1]
+                or EmptyTargetValue
+        end
+
+        Config.CorpseIllusion.TargetName =
+            InitialTarget ~= EmptyTargetValue
+            and InitialTarget
+            or ""
+
+        local CorpseTargetDropdown =
+            AddDropdown(
+                CorpseIllusionSection,
+                "Target Corpse",
+                "corpse_illusion_target",
+                InitialTarget,
+                InitialValues,
+                function(Value)
+                    if
+                        Value
+                        == EmptyTargetValue
+                    then
+                        Config.CorpseIllusion.TargetName = ""
+                    else
+                        Config.CorpseIllusion.TargetName =
+                            tostring(Value or "")
+                    end
+                end
+            )
+
+        AddSlider(
+            CorpseIllusionSection,
+            "Illusion Distance",
+            "corpse_illusion_distance",
+            Config.CorpseIllusion.Distance,
+            2,
+            20,
+            0,
+            function(Value)
+                Config.CorpseIllusion.Distance = Value
+            end
+        )
+
+        local CorpseIllusionStatus =
+            CorpseIllusionSection:AddLabel(
+                "Status: ready",
+                true
+            )
+
+        local function RefreshCorpseTargets()
+            local Names =
+                CorpseIllusion.GetCorpseNames()
+
+            local Values =
+                Names
+
+            if #Values == 0 then
+                Values = {
+                    EmptyTargetValue,
+                }
+            end
+
+            CorpseTargetDropdown:SetValues(
+                Values
+            )
+
+            local Current =
+                tostring(
+                    Config.CorpseIllusion.TargetName
+                    or ""
+                )
+
+            if
+                Current == ""
+                or not table.find(
+                    Names,
+                    Current
+                )
+            then
+                Current =
+                    Names[1]
+                    or EmptyTargetValue
+            end
+
+            CorpseTargetDropdown:SetValue(
+                Current
+            )
+
+            CorpseIllusionStatus:SetText(
+                "Status: "
+                .. tostring(#Names)
+                .. " corpses found"
+            )
+        end
+
+        CorpseIllusionSection:AddButton({
+            Icon = "arrow-rotate-right",
+            Name = "Refresh Corpses",
+            Callback = function()
+                RefreshCorpseTargets()
+            end,
+        })
+
+        CorpseIllusionSection:AddButton({
+            Icon = "eye",
+            Name = "Show Local Illusion",
+            ToolTip = "Creates a visual-only local copy near your character.",
+            Callback = function()
+                local TargetName =
+                    tostring(
+                        Config.CorpseIllusion.TargetName
+                        or ""
+                    )
+
+                local Success,
+                    Message =
+                        CorpseIllusion.Show(
+                            TargetName
+                        )
+
+                CorpseIllusionStatus:SetText(
+                    (
+                        Success
+                        and "Status: "
+                        or "Status: error - "
+                    )
+                    .. tostring(Message)
+                )
+            end,
+        })
+
+        CorpseIllusionSection:AddButton({
+            Icon = "x",
+            Name = "Clear Local Illusion",
+            Callback = function()
+                local Success,
+                    Message =
+                        CorpseIllusion.Clear()
+
+                CorpseIllusionStatus:SetText(
+                    (
+                        Success
+                        and "Status: "
+                        or "Status: error - "
+                    )
+                    .. tostring(Message)
+                )
+            end,
+        })
 
         local CorpseAppearanceSection = CorpsesTab:AddSection({
             Name = "Appearance",

@@ -19,6 +19,7 @@ REQUIRED = [
 
     ROOT / "src" / "Modules" / "PlayerESP.lua",
     ROOT / "src" / "Modules" / "CorpseESP.lua",
+    ROOT / "src" / "Modules" / "CorpseIllusion.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
 
     ROOT / "vendor" / "NeverLose.lua",
@@ -51,6 +52,18 @@ STALE_TOKENS = {
     "src/Main.lua": [
         "LootESPModule",
         "src/Modules/LootESP.lua",
+        "CorpseActionsModule",
+        "src/Modules/CorpseActions.lua",
+
+        # Main.lua is bundle-only. Runtime source fetching must not return.
+        "game:HttpGet",
+        "game.HttpGet",
+        "raw.githubusercontent.com",
+        "api.github.com",
+        "ResolveSourceRef",
+        "LoadModuleFromRef",
+        "NEWZ_SOURCE_REF",
+        "CacheBust",
     ],
 
     "src/Modules/ESP.lua": [
@@ -81,6 +94,11 @@ FORBIDDEN_MONOLITH_TOKENS = [
     "local function UpdateCornerBox(",
 ]
 
+FORBIDDEN_OLD_ACTION_PATHS = [
+    ROOT / "src" / "Modules" / "CorpseActions.lua",
+    ROOT / "server" / "CorpseActions.server.lua",
+]
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -104,6 +122,15 @@ def main() -> int:
         ):
             print(
                 f"FAIL missing/empty: {path.relative_to(ROOT)}"
+            )
+
+            failed = True
+
+    for path in FORBIDDEN_OLD_ACTION_PATHS:
+        if path.exists():
+            print(
+                "FAIL obsolete corpse action file still exists: "
+                f"{path.relative_to(ROOT)}"
             )
 
             failed = True

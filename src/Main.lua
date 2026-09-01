@@ -1,8 +1,3 @@
-local HttpService =
-    game:GetService(
-        "HttpService"
-    )
-
 local Environment =
     (getgenv and getgenv())
     or _G
@@ -32,204 +27,49 @@ local function CleanupController(Controller)
     end
 end
 
-local CacheBust =
-    tostring(
-        DateTime.now().UnixTimestampMillis
-    )
-
-local function ResolveSourceRef()
-    local ExplicitRef =
-        Environment.NEWZ_SOURCE_REF
-
-    if
-        type(ExplicitRef) == "string"
-        and ExplicitRef ~= ""
-        and ExplicitRef ~= "main"
-    then
-        return ExplicitRef
-    end
-
-    local ApiURL =
-        "https://api.github.com/repos/devvcampos/newz/commits/main?cb="
-        .. CacheBust
-
-    local Success, Body =
-        pcall(
-            game.HttpGet,
-            game,
-            ApiURL
-        )
-
-    assert(
-        Success,
-        "Nao foi possivel resolver o commit atual do Newz. "
-        .. "Use dist/newz.lua ou defina NEWZ_SOURCE_REF para um commit/tag imutavel."
-    )
-
-    local DecodeSuccess, Data =
-        pcall(
-            HttpService.JSONDecode,
-            HttpService,
-            Body
-        )
-
-    assert(
-        DecodeSuccess
-        and type(Data) == "table"
-        and type(Data.sha) == "string"
-        and Data.sha ~= "",
-        "Resposta invalida ao resolver o commit do Newz"
-    )
-
-    return Data.sha
-end
-
-local function LoadModuleFromRef(
-    SourceRef,
-    Path
-)
-    local URL =
-        "https://raw.githubusercontent.com/devvcampos/newz/"
-        .. SourceRef
-        .. "/"
-        .. Path
-
-    local Source =
-        game:HttpGet(
-            URL
-        )
-
-    local Chunk, LoadError =
-        loadstring(
-            Source,
-            "@newz/" .. Path
-        )
-
-    assert(
-        Chunk,
-        "Falha ao carregar "
-        .. Path
-        .. ": "
-        .. tostring(LoadError)
-    )
-
-    local Success, Result =
-        xpcall(
-            Chunk,
-            Traceback
-        )
-
-    assert(
-        Success,
-        "Erro executando "
-        .. Path
-        .. ": "
-        .. tostring(Result)
-    )
-
-    return Result
-end
-
 local Bundled =
     Environment.NEWZ_BUNDLE
 
-local Config
+assert(
+    type(Bundled) == "table",
+    "Newz deve ser executado atraves do bundle dist/newz.lua"
+)
 
-local ProfilerModule
-local BoundsModule
-local VisualsModule
-local SchedulerModule
+local Config =
+    Bundled.Config
 
-local PlayerESPModule
-local CorpseESPModule
-local ESPModule
+local ProfilerModule =
+    Bundled.ProfilerModule
 
-local UIModule
-local NeverLose
+local BoundsModule =
+    Bundled.BoundsModule
 
-local SourceRef
+local VisualsModule =
+    Bundled.VisualsModule
 
-if type(Bundled) == "table" then
-    Config = Bundled.Config
+local SchedulerModule =
+    Bundled.SchedulerModule
 
-    ProfilerModule = Bundled.ProfilerModule
-    BoundsModule = Bundled.BoundsModule
-    VisualsModule = Bundled.VisualsModule
-    SchedulerModule = Bundled.SchedulerModule
+local PlayerESPModule =
+    Bundled.PlayerESPModule
 
-    PlayerESPModule = Bundled.PlayerESPModule
-    CorpseESPModule = Bundled.CorpseESPModule
-    ESPModule = Bundled.ESPModule
+local CorpseESPModule =
+    Bundled.CorpseESPModule
 
-    UIModule = Bundled.UIModule
-    NeverLose = Bundled.NeverLose
+local CorpseIllusionModule =
+    Bundled.CorpseIllusionModule
 
-    SourceRef = "bundle"
-else
-    SourceRef =
-        ResolveSourceRef()
+local ESPModule =
+    Bundled.ESPModule
 
-    Config =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Config.lua"
-        )
+local UIModule =
+    Bundled.UIModule
 
-    ProfilerModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Core/Profiler.lua"
-        )
+local NeverLose =
+    Bundled.NeverLose
 
-    BoundsModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Core/Bounds.lua"
-        )
-
-    VisualsModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Core/Visuals.lua"
-        )
-
-    SchedulerModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Core/Scheduler.lua"
-        )
-
-    PlayerESPModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Modules/PlayerESP.lua"
-        )
-
-    CorpseESPModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Modules/CorpseESP.lua"
-        )
-
-
-    ESPModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Modules/ESP.lua"
-        )
-
-    UIModule =
-        LoadModuleFromRef(
-            SourceRef,
-            "src/Ui.lua"
-        )
-
-    NeverLose =
-        LoadModuleFromRef(
-            SourceRef,
-            "vendor/NeverLose.lua"
-        )
-end
+local SourceRef =
+    "bundle"
 
 assert(
     type(Config) == "table",
@@ -272,6 +112,11 @@ assert(
     "CorpseESP.lua invalido"
 )
 
+assert(
+    type(CorpseIllusionModule) == "table"
+    and type(CorpseIllusionModule.Init) == "function",
+    "CorpseIllusion.lua invalido"
+)
 
 assert(
     type(ESPModule) == "table"
@@ -301,6 +146,7 @@ then
 end
 
 local Profiler
+local CorpseIllusionController
 local ESPController
 local UIController
 
@@ -314,6 +160,16 @@ local InitSuccess, InitError =
         assert(
             type(Profiler) == "table",
             "Profiler.Init nao retornou controller"
+        )
+
+        CorpseIllusionController =
+            CorpseIllusionModule.Init(
+                Config
+            )
+
+        assert(
+            type(CorpseIllusionController) == "table",
+            "CorpseIllusion.Init nao retornou controller"
         )
 
         ESPController =
@@ -341,6 +197,7 @@ local InitSuccess, InitError =
                 Config,
                 {
                     NeverLose = NeverLose,
+                    CorpseIllusion = CorpseIllusionController,
                 }
             )
 
@@ -353,6 +210,7 @@ local InitSuccess, InitError =
 if not InitSuccess then
     CleanupController(UIController)
     CleanupController(ESPController)
+    CleanupController(CorpseIllusionController)
     CleanupController(Profiler)
 
     error(
@@ -365,6 +223,7 @@ end
 local Project = {
     Config = Config,
     Profiler = Profiler,
+    CorpseIllusion = CorpseIllusionController,
     ESP = ESPController,
     UI = UIController,
     SourceRef = SourceRef,
@@ -381,14 +240,17 @@ function Project.Destroy()
 
     CleanupController(UIController)
     CleanupController(ESPController)
+    CleanupController(CorpseIllusionController)
     CleanupController(Profiler)
 
     UIController = nil
     ESPController = nil
+    CorpseIllusionController = nil
     Profiler = nil
 
     Project.UI = nil
     Project.ESP = nil
+    Project.CorpseIllusion = nil
     Project.Profiler = nil
 
     if Environment.NEWZ == Project then

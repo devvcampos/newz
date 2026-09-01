@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.4.2",
+    Version = "0.4.3",
 }
 
 Config.Runtime = {
@@ -51,6 +51,17 @@ Config.ESP = {
     CornerRatio = 0.25,
 
     MaxDistance = 1000,
+}
+
+Config.CorpseIllusion = {
+    TargetName = "",
+
+    -- Position of the visual-only copy relative to the local player.
+    Distance = 5,
+    VerticalOffset = 0,
+
+    -- Local-only container created under Workspace.
+    ContainerName = "newz_LocalIllusions",
 }
 
 Config.Corpses = {

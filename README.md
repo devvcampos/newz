@@ -4,7 +4,7 @@ Ferramenta visual em Luau para diagnóstico autorizado de jogadores e entidades 
 
 ## Estado atual
 
-A versão `0.4.2` mantém a arquitetura modular e as otimizações de hot path da `0.4.1`, remove o experimento de Loot ESP e refina o Corpse ESP para reduzir custo e poluição visual.
+A versão `0.4.3` mantém a arquitetura modular e as otimizações anteriores e adiciona Local Illusion para inspeção visual de um cadáver selecionado sem mover o objeto replicado pelo servidor.
 
 Recursos atuais:
 
@@ -14,6 +14,7 @@ Recursos atuais:
 - Corpse ESP com box, nome e distância;
 - seleção periódica dos cadáveres mais próximos;
 - limite configurável de cadáveres ativos;
+- Local Illusion com seleção de cadáver por nick, refresh da lista e distância visual configurável;
 - profiler em tempo real;
 - projection engine calibrada por frame;
 - scheduler round-robin a 30 Hz por entidade;
@@ -39,6 +40,7 @@ newz/
 │  └─ Modules/
 │     ├─ PlayerESP.lua
 │     ├─ CorpseESP.lua
+│     ├─ CorpseIllusion.lua
 │     └─ ESP.lua
 │
 ├─ vendor/
@@ -71,6 +73,8 @@ newz/
 
 `CorpseESP.lua` acompanha todos os Models em `Workspace.Corpses`, porém apenas os cadáveres mais próximos dentro de `MaxDistance` entram no conjunto ativo de renderização, limitado por `MaxCorpses`.
 
+`CorpseIllusion.lua` cria uma cópia visual exclusivamente local do cadáver escolhido. A cópia é ancorada, sem colisão/interação e fica fora de `Workspace.Corpses`, portanto não entra novamente no Corpse ESP.
+
 `ESP.lua` funciona como facade/orquestrador. Ele cria o `ScreenGui`, instancia o Core, inicializa Player/Corpse ESP e coordena o `RenderStepped`.
 
 ## Corpse selection
@@ -94,6 +98,23 @@ Corpse update
 Corpse bounds
 Corpse visuals
 ```
+
+
+## Local Illusion
+
+Na aba `Corpses`, a seção `Local Illusion` permite:
+
+```text
+Target Corpse       [ BopBlx_YT ▼ ]
+Illusion Distance   [ 5 ]
+[ Refresh Corpses ]
+[ Show Local Illusion ]
+[ Clear Local Illusion ]
+```
+
+`Show Local Illusion` não altera o Model original em `Workspace.Corpses`. O módulo clona apenas a representação disponível no cliente, remove scripts/interações e `Loot_Corpse`, ancora as partes e posiciona a cópia visual na frente do personagem local.
+
+A ilusão é destruída ao usar `Clear Local Illusion` ou ao descarregar o Newz.
 
 ## Hot-path optimization
 

@@ -28,21 +28,25 @@ function Profiler.Init(Config)
     local WindowFramePeak = 0
     local LastEnabled = false
 
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    local OldGui = PlayerGui:FindFirstChild("newz_Profiler")
+    local CoreGui = (gethui and gethui()) or game:GetService("CoreGui")
+    
+    -- Gera um nome aleatório/ofuscado para a GUI
+    local GuiName = string.char(80, 114, 111, 102, 88) -- "ProfX"
+
+    local OldGui = CoreGui:FindFirstChild(GuiName)
 
     if OldGui then
         OldGui:Destroy()
     end
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "newz_Profiler"
+    ScreenGui.Name = GuiName
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
     ScreenGui.DisplayOrder = 1001
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Enabled = false
-    ScreenGui.Parent = PlayerGui
+    ScreenGui.Parent = CoreGui
 
     local Panel = Instance.new("Frame")
     Panel.Name = "Panel"
