@@ -123,80 +123,97 @@ function Freecam.Init(Config)
     end
 
     -- ====== NOVA FUNÇÃO DE MOVIMENTO SEGURO ======
-    local function MoveCharacterToCamera(CameraCFrame)
-        local Character, Root = GetCharacter()
-        if not Character then
-            return false, "Personagem nao esta pronto"
-        end
-
-        local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-        if not Humanoid then
-            return false, "Humanoid nao encontrado"
-        end
-
-        local Mode = Settings.TeleportMode or "Walk"
-        local Destination = GetExitCFrame(CameraCFrame)
-        local DestPos = Destination.Position
-
-        -- 1) Modo "Walk" (recomendado)
-        if Mode == "Walk" then
-            -- Desanchar para permitir movimento
-            Root.Anchored = false
-            Humanoid.WalkSpeed = math.clamp(Settings.WalkSpeed or 250, 16, 256)
-
-            Humanoid:MoveTo(DestPos)
-
-            local StartTime = os.clock()
-            local Timeout = Settings.WalkTimeout or 6
-
-            while os.clock() - StartTime < Timeout do
-                task.wait(0.1)
-
-                if (Root.Position - DestPos).Magnitude < 3 then
-                    Humanoid.WalkSpeed = 16
-                    return true, "Movimento concluido via Walk"
-                end
-            end
-
-            -- Se não chegou, tenta forçar com PivotTo (fallback arriscado)
-            Humanoid.WalkSpeed = 16
-            Character:PivotTo(Destination)
-            StopCharacterMotion(Character)
-            return false, "Walk falhou, posicao forçada (pode ser revertido)"
-        end
-
-        -- 2) Modo "Velocity" (mais rápido, porém mais detectável)
-        if Mode == "Velocity" then
-            Root.Anchored = true
-            Humanoid.WalkSpeed = 0
-
-            local Direction = (DestPos - Root.Position).Unit
-            local Distance = (DestPos - Root.Position).Magnitude
-
-            if Distance < 1 then
-                Root.Anchored = false
-                Humanoid.WalkSpeed = 16
-                return true, "Ja esta no destino"
-            end
-
-            local Speed = math.clamp(Settings.VelocitySpeed or 200, 50, 500)
-            local Duration = math.clamp(Settings.VelocityDuration or 0.3, 0.05, 1)
-
-            Root.AssemblyLinearVelocity = Direction * Speed
-            task.wait(Duration)
-
-            Root.AssemblyLinearVelocity = Vector3.zero
-            Character:PivotTo(Destination)
-
-            Root.Anchored = false
-            Humanoid.WalkSpeed = 16
-
-            return true, "Movimento via Velocity"
-        end
-
-        -- 3) Modo "None" ou fallback: não move
-        return false, "Teleporte desativado (None)"
+local function MoveCharacterToCamera(CameraCFrame)
+    local Character, Root = GetCharacter()
+    if not Character then
+        return false, "Personagem nao esta pronto"
     end
+
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if not Humanoid then
+        return false, "Humanoid nao encontrado"
+    end
+
+    local Mode = Settings.TeleportMode or "Velocity"
+    local Destination = GetExitCFrame(CameraCFrame)
+    local DestPos = Destination.Position
+
+    -- ===== MODO VELOCITY (rápido, direto, inclui altura) =====
+    if Mode == "Velocity" then
+        Root.Anchored = true
+        Humanoid.WalkSpeed = 0
+
+        local Direction = (DestPos - Root.Position).Unit
+        local Distance = (DestPos - Root.Position).Magnitude
+
+        if Distance < 1 then
+            Root.Anchored = false
+            Humanoid.WalkSpeed = 16
+            return true, "Ja esta no destino"
+        end
+
+        -- Determinar velocidade e duração
+        local Speed = math.clamp(Settings.VelocitySpeed or 100, 1, 500)
+        local Duration = Settings.VelocityDuration or 0
+
+        if Duration <= 0 then
+            -- Auto-calcula: tempo = distância / velocidade
+            Duration = Distance / Speed
+        else
+            -- Se duração manual, ajusta velocidade para cobrir a distância
+            Speed = Distance / Duration
+        end
+
+        -- Aplica velocidade (direção inclui vertical)
+        Root.AssemblyLinearVelocity = Direction * Speed
+
+        -- Aguarda o tempo necessário (ou um pouco mais para garantir)
+        task.wait(Duration + 0.05)
+
+        -- Para o movimento e força a posição exata
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Character:PivotTo(Destination)
+
+        Root.Anchored = false
+        Humanoid.WalkSpeed = 16
+
+        -- Se SnapToGround estiver ativo, ajusta para superfície
+        if Settings.SnapToGround ~= false then
+            -- O Destination já foi calculado com snap, então está ok
+        end
+
+        return true, "Movimento via Velocity concluido"
+    end
+
+    -- ===== MODO WALK (fallback seguro) =====
+    if Mode == "Walk" then
+        Root.Anchored = false
+        Humanoid.WalkSpeed = math.clamp(Settings.WalkSpeed or 250, 16, 256)
+
+        Humanoid:MoveTo(DestPos)
+
+        local StartTime = os.clock()
+        local Timeout = Settings.WalkTimeout or 6
+
+        while os.clock() - StartTime < Timeout do
+            task.wait(0.1)
+
+            if (Root.Position - DestPos).Magnitude < 3 then
+                Humanoid.WalkSpeed = 16
+                return true, "Movimento concluido via Walk"
+            end
+        end
+
+        Humanoid.WalkSpeed = 16
+        Character:PivotTo(Destination)
+        StopCharacterMotion(Character)
+        return false, "Walk falhou, posicao forçada"
+    end
+
+    -- ===== MODO NONE =====
+    return false, "Teleporte desativado (None)"
+end
+
     -- ================================================
 
     local function MovementAction(_, InputState, InputObject)

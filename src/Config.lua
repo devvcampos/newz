@@ -97,20 +97,11 @@ Config.Freecam = {
     GroundProbeDistance = 200,
     GroundOffset = 3,
 
-    -- ===== NOVAS OPÇÕES PARA O TELEPORTE SEGURO =====
-    -- Modo de movimento ao sair da freecam:
-    -- "Walk"    -> Usa Humanoid:MoveTo (100% natural, nunca detectado)
-    -- "Velocity"-> Aplica velocidade alta por curto período (mais arriscado)
-    -- "None"    -> Não move o personagem (apenas restaura câmera)
-    TeleportMode = "Walk",
-
-    -- Parâmetros do modo "Walk"
-    WalkSpeed = 250,        -- Velocidade de corrida (máx 256)
-    WalkTimeout = 6,        -- Tempo máximo em segundos para chegar ao destino
+    TeleportMode = "Velocity",
 
     -- Parâmetros do modo "Velocity" (se você quiser testar depois)
-    VelocitySpeed = 200,    -- Velocidade do impulso (studs/s)
-    VelocityDuration = 0.3, -- Duração do impulso (segundos)
+    VelocitySpeed = 100,    -- Velocidade do impulso (studs/s)
+    VelocityDuration = 0 -- Duração do impulso (segundos)
 }
 
 return Config
