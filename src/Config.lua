@@ -97,10 +97,10 @@ Config.Freecam = {
     GroundProbeDistance = 200,
     GroundOffset = 3,
 
-    TeleportMode = "Velocity",
+    TeleportMode = "Glide",
 
     -- Parâmetros do modo "Velocity" (se você quiser testar depois)
-    VelocitySpeed = 100,    -- Velocidade do impulso (studs/s)
+    VelocitySpeed = 80,    -- Velocidade do impulso (studs/s)
     VelocityDuration = 0 -- Duração do impulso (segundos)
 }
 

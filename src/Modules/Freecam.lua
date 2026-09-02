@@ -122,8 +122,7 @@ function Freecam.Init(Config)
         return CFrame.lookAt(Position, Position + FlatLook)
     end
 
-    -- ====== NOVA FUNÇÃO DE MOVIMENTO SEGURO ======
-local function MoveCharacterToCamera(CameraCFrame)
+ local function MoveCharacterToCamera(CameraCFrame)
     local Character, Root = GetCharacter()
     if not Character then
         return false, "Personagem nao esta pronto"
@@ -134,55 +133,50 @@ local function MoveCharacterToCamera(CameraCFrame)
         return false, "Humanoid nao encontrado"
     end
 
-    local Mode = Settings.TeleportMode or "Velocity"
     local Destination = GetExitCFrame(CameraCFrame)
     local DestPos = Destination.Position
 
-    -- ===== MODO VELOCITY (rápido, direto, inclui altura) =====
-    if Mode == "Velocity" then
-        Root.Anchored = true
-        Humanoid.WalkSpeed = 0
+    -- ===== MODO "GLIDE" (suave, sem rollback) =====
+    local Mode = Settings.TeleportMode or "Glide"
 
+    if Mode == "Glide" then
+        -- Desanchar o personagem para permitir movimento
+        Root.Anchored = false
+
+        -- Configurar a velocidade média (máximo 100 para não ser detectado)
+        local Speed = math.clamp(Settings.VelocitySpeed or 80, 10, 100)
+        
+        -- Calcular direção (inclui vertical)
         local Direction = (DestPos - Root.Position).Unit
         local Distance = (DestPos - Root.Position).Magnitude
 
         if Distance < 1 then
-            Root.Anchored = false
-            Humanoid.WalkSpeed = 16
             return true, "Ja esta no destino"
         end
 
-        -- Determinar velocidade e duração
-        local Speed = math.clamp(Settings.VelocitySpeed or 100, 1, 500)
-        local Duration = Settings.VelocityDuration or 0
+        -- Criar um BodyVelocity para empurrar suavemente
+        local BodyVelocity = Instance.new("BodyVelocity")
+        BodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6) -- força máxima
+        BodyVelocity.Velocity = Direction * Speed
+        BodyVelocity.Parent = Root
 
-        if Duration <= 0 then
-            -- Auto-calcula: tempo = distância / velocidade
-            Duration = Distance / Speed
-        else
-            -- Se duração manual, ajusta velocidade para cobrir a distância
-            Speed = Distance / Duration
+        -- Aguardar até chegar perto do destino (ou timeout)
+        local Start = os.clock()
+        local Timeout = math.clamp(Distance / Speed + 1, 1, 30) -- tempo máximo
+
+        while os.clock() - Start < Timeout do
+            task.wait(0.1)
+
+            -- Se chegou perto o suficiente, parar
+            if (Root.Position - DestPos).Magnitude < 3 then
+                BodyVelocity:Destroy()
+                return true, "Movimento concluido (Glide)"
+            end
         end
 
-        -- Aplica velocidade (direção inclui vertical)
-        Root.AssemblyLinearVelocity = Direction * Speed
-
-        -- Aguarda o tempo necessário (ou um pouco mais para garantir)
-        task.wait(Duration + 0.05)
-
-        -- Para o movimento e força a posição exata
-        Root.AssemblyLinearVelocity = Vector3.zero
-        Character:PivotTo(Destination)
-
-        Root.Anchored = false
-        Humanoid.WalkSpeed = 16
-
-        -- Se SnapToGround estiver ativo, ajusta para superfície
-        if Settings.SnapToGround ~= false then
-            -- O Destination já foi calculado com snap, então está ok
-        end
-
-        return true, "Movimento via Velocity concluido"
+        -- Se timeout, parar e deixar onde está (sem forçar)
+        BodyVelocity:Destroy()
+        return false, "Timeout - personagem parou no caminho"
     end
 
     -- ===== MODO WALK (fallback seguro) =====
@@ -192,26 +186,23 @@ local function MoveCharacterToCamera(CameraCFrame)
 
         Humanoid:MoveTo(DestPos)
 
-        local StartTime = os.clock()
+        local Start = os.clock()
         local Timeout = Settings.WalkTimeout or 6
 
-        while os.clock() - StartTime < Timeout do
+        while os.clock() - Start < Timeout do
             task.wait(0.1)
-
             if (Root.Position - DestPos).Magnitude < 3 then
                 Humanoid.WalkSpeed = 16
-                return true, "Movimento concluido via Walk"
+                return true, "Movimento concluido (Walk)"
             end
         end
 
         Humanoid.WalkSpeed = 16
-        Character:PivotTo(Destination)
-        StopCharacterMotion(Character)
-        return false, "Walk falhou, posicao forçada"
+        return false, "Walk timeout"
     end
 
     -- ===== MODO NONE =====
-    return false, "Teleporte desativado (None)"
+    return false, "Teleporte desativado"
 end
 
     -- ================================================
