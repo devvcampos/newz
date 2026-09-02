@@ -19,7 +19,7 @@ REQUIRED = [
 
     ROOT / "src" / "Modules" / "PlayerESP.lua",
     ROOT / "src" / "Modules" / "CorpseESP.lua",
-    ROOT / "src" / "Modules" / "CorpseIllusion.lua",
+    ROOT / "src" / "Modules" / "Freecam.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
 
     ROOT / "vendor" / "NeverLose.lua",
@@ -37,6 +37,9 @@ STALE_TOKENS = {
         "LootContainerName",
         "LootMarkerName",
         "LootMaxItems",
+        "CorpseIllusion",
+        "TeleportDistance",
+        "TeleportHeight",
     ],
 
     "src/Ui.lua": [
@@ -47,6 +50,11 @@ STALE_TOKENS = {
         "CompKiller",
         "corpses_loot",
         "Loot Max Items",
+        "CorpseIllusion",
+        "BringCorpseToMe",
+        "Go To Corpse",
+        "Trazer Corpo",
+        "Local Illusion",
     ],
 
     "src/Main.lua": [
@@ -54,8 +62,9 @@ STALE_TOKENS = {
         "src/Modules/LootESP.lua",
         "CorpseActionsModule",
         "src/Modules/CorpseActions.lua",
+        "CorpseIllusionModule",
+        "CorpseIllusionController",
 
-        # Main.lua is bundle-only. Runtime source fetching must not return.
         "game:HttpGet",
         "game.HttpGet",
         "raw.githubusercontent.com",
@@ -64,6 +73,10 @@ STALE_TOKENS = {
         "LoadModuleFromRef",
         "NEWZ_SOURCE_REF",
         "CacheBust",
+    ],
+
+    "scripts/build.py": [
+        "CorpseIllusion",
     ],
 
     "src/Modules/ESP.lua": [
@@ -81,9 +94,11 @@ STALE_TOKENS = {
 
     "README.md": [
         "vendor/Compkiller.lua",
-        "pasta configurável do `Workspace`",
         "LootESP.lua",
         "Loot Max Items",
+        "CorpseIllusion.lua",
+        "Local Illusion",
+        "NEWZ_SOURCE_REF",
     ],
 }
 
@@ -94,9 +109,11 @@ FORBIDDEN_MONOLITH_TOKENS = [
     "local function UpdateCornerBox(",
 ]
 
-FORBIDDEN_OLD_ACTION_PATHS = [
+FORBIDDEN_OLD_PATHS = [
     ROOT / "src" / "Modules" / "CorpseActions.lua",
+    ROOT / "src" / "Modules" / "CorpseIllusion.lua",
     ROOT / "server" / "CorpseActions.server.lua",
+    ROOT / "REMOVE_OLD_CORPSE_ACTIONS.txt",
 ]
 
 
@@ -126,10 +143,10 @@ def main() -> int:
 
             failed = True
 
-    for path in FORBIDDEN_OLD_ACTION_PATHS:
+    for path in FORBIDDEN_OLD_PATHS:
         if path.exists():
             print(
-                "FAIL obsolete corpse action file still exists: "
+                "FAIL obsolete file still exists: "
                 f"{path.relative_to(ROOT)}"
             )
 
@@ -174,6 +191,31 @@ def main() -> int:
 
                 failed = True
 
+    freecam = (
+        ROOT
+        / "src"
+        / "Modules"
+        / "Freecam.lua"
+    )
+
+    if freecam.is_file():
+        freecam_text = freecam.read_text(
+            encoding="utf-8"
+        )
+
+        for token in [
+            "Enum.CameraType.Scriptable",
+            "BindActionAtPriority",
+            "TeleportOnExit",
+            "SetKeybind",
+        ]:
+            if token not in freecam_text:
+                print(
+                    f"FAIL Freecam missing expected token {token!r}"
+                )
+
+                failed = True
+
     dist = ROOT / "dist" / "newz.lua"
 
     if args.require_dist:
@@ -194,7 +236,9 @@ def main() -> int:
     )
 
     if analyzer:
-        print("Running luau-analyze...")
+        print(
+            "Running luau-analyze..."
+        )
 
         result = subprocess.run(
             [
@@ -215,7 +259,10 @@ def main() -> int:
     if failed:
         return 1
 
-    print("Checks passed")
+    print(
+        "Checks passed"
+    )
+
     return 0
 
 

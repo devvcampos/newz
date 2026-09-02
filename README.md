@@ -4,7 +4,7 @@ Ferramenta visual em Luau para diagnóstico autorizado de jogadores e entidades 
 
 ## Estado atual
 
-A versão `0.4.3` mantém a arquitetura modular e as otimizações anteriores e adiciona Local Illusion para inspeção visual de um cadáver selecionado sem mover o objeto replicado pelo servidor.
+A versão `0.5.0` mantém o Player ESP e o Corpse ESP modularizados e adiciona uma Freecam independente do sistema de ESP.
 
 Recursos atuais:
 
@@ -14,13 +14,17 @@ Recursos atuais:
 - Corpse ESP com box, nome e distância;
 - seleção periódica dos cadáveres mais próximos;
 - limite configurável de cadáveres ativos;
-- Local Illusion com seleção de cadáver por nick, refresh da lista e distância visual configurável;
+- Freecam com tecla configurável;
+- movimento por WASD, Space/Ctrl e boost com Shift;
+- velocidade, boost e sensibilidade configuráveis;
+- opção de mover o personagem para a posição final da câmera ao sair;
+- opção de procurar o chão abaixo da câmera antes do reposicionamento;
 - profiler em tempo real;
 - projection engine calibrada por frame;
 - scheduler round-robin a 30 Hz por entidade;
 - build reproduzível em `dist/newz.lua`.
 
-A identificação da arma equipada continua usando um `Tool` diretamente no `Player.Character` com `Type == "Gun"` ou `GunBound == true`.
+O antigo módulo de ações/preview de cadáveres foi removido. O projeto mantém apenas o Corpse ESP.
 
 ## Arquitetura
 
@@ -40,7 +44,7 @@ newz/
 │  └─ Modules/
 │     ├─ PlayerESP.lua
 │     ├─ CorpseESP.lua
-│     ├─ CorpseIllusion.lua
+│     ├─ Freecam.lua
 │     └─ ESP.lua
 │
 ├─ vendor/
@@ -57,25 +61,51 @@ newz/
 └─ README.md
 ```
 
-### Core
-
-`Bounds.lua` concentra cache de partes corporais, root fallback de cadáveres e a projection engine otimizada.
-
-`Visuals.lua` concentra criação, atualização, ocultação e destruição de boxes/textos.
-
-`Scheduler.lua` implementa o round-robin compartilhado usado pelos trackers.
-
-`Profiler.lua` mede custo CPU-side do Newz, incluindo `Newz.Render`, bounds, visibility, visuals e seleção de cadáveres.
-
-### Modules
+## Modules
 
 `PlayerESP.lua` é responsável pelo lifecycle e renderização dos jogadores, incluindo streaming, humanoid, arma equipada e visibility.
 
-`CorpseESP.lua` acompanha todos os Models em `Workspace.Corpses`, porém apenas os cadáveres mais próximos dentro de `MaxDistance` entram no conjunto ativo de renderização, limitado por `MaxCorpses`.
+`CorpseESP.lua` acompanha os Models em `Workspace.Corpses`, mas apenas os cadáveres mais próximos dentro de `MaxDistance` entram no conjunto ativo de renderização, limitado por `MaxCorpses`.
 
-`CorpseIllusion.lua` cria uma cópia visual exclusivamente local do cadáver escolhido. A cópia é ancorada, sem colisão/interação e fica fora de `Workspace.Corpses`, portanto não entra novamente no Corpse ESP.
+`Freecam.lua` controla uma câmera `Scriptable` sem mover continuamente o personagem. Ao sair normalmente, `TeleportOnExit` pode reposicionar o personagem uma única vez para a posição final da câmera.
 
-`ESP.lua` funciona como facade/orquestrador. Ele cria o `ScreenGui`, instancia o Core, inicializa Player/Corpse ESP e coordena o `RenderStepped`.
+`ESP.lua` funciona como facade/orquestrador do Player ESP e Corpse ESP.
+
+## Freecam
+
+Configuração padrão:
+
+```lua
+Config.Freecam = {
+    Keybind = "V",
+    Speed = 55,
+    BoostMultiplier = 3,
+    MouseSensitivity = 0.12,
+    TeleportOnExit = true,
+    SnapToGround = true,
+}
+```
+
+Controles:
+
+```text
+V                 liga/desliga por padrão
+WASD              movimentação horizontal
+Space             subir
+Ctrl              descer
+Shift             boost
+Mouse             olhar
+```
+
+A tecla pode ser alterada pela interface.
+
+Enquanto a Freecam está ativa, o módulo usa `ContextActionService` para consumir os controles de movimento e evita que WASD mova o personagem ao mesmo tempo.
+
+Quando a Freecam é desligada normalmente com `TeleportOnExit = true`, o módulo tenta mover o personagem para a posição final da câmera. Com `SnapToGround = true`, um raycast procura uma superfície abaixo da câmera antes do reposicionamento.
+
+O reposicionamento é iniciado no cliente. Uma experiência com autoridade/correção server-side pode rejeitar ou corrigir essa mudança.
+
+Ao descarregar o Newz, a câmera é restaurada sem reposicionar o personagem.
 
 ## Corpse selection
 
@@ -87,60 +117,11 @@ MaxCorpses = 8
 SelectionInterval = 0.25 s
 ```
 
-O tracker continua conhecendo todos os cadáveres da pasta, mas a cada intervalo seleciona os mais próximos. Cadáveres fora do conjunto ativo não executam o caminho caro de bounds/visuals.
-
-O profiler diferencia:
-
-```text
-Tracked: players X | corpses Y | active Z
-Corpse select
-Corpse update
-Corpse bounds
-Corpse visuals
-```
-
-
-## Local Illusion
-
-Na aba `Corpses`, a seção `Local Illusion` permite:
-
-```text
-Target Corpse       [ BopBlx_YT ▼ ]
-Illusion Distance   [ 5 ]
-[ Refresh Corpses ]
-[ Show Local Illusion ]
-[ Clear Local Illusion ]
-```
-
-`Show Local Illusion` não altera o Model original em `Workspace.Corpses`. O módulo clona apenas a representação disponível no cliente, remove scripts/interações e `Loot_Corpse`, ancora as partes e posiciona a cópia visual na frente do personagem local.
-
-A ilusão é destruída ao usar `Clear Local Illusion` ou ao descarregar o Newz.
-
-## Hot-path optimization
-
-PlayerESP, CorpseESP e o facade fazem binding local das funções usadas nos loops críticos. O scheduler reutiliza callbacks estáveis e a posição da câmera é calculada uma vez por `Step`.
-
-A projection engine acumula os oito cantos de cada parte usando variáveis locais antes de escrever o resultado de volta no estado de bounds.
-
-## Projection Engine
-
-A projection engine mantém os mesmos oito cantos por parte usados originalmente, mas evita executar `WorldToViewportPoint` para cada canto.
-
-A câmera é calibrada uma vez por frame com três projeções nativas. Os cantos são então projetados em camera-space. Um caminho legado continua disponível automaticamente para estados de câmera inválidos.
-
-## Carregamento de desenvolvimento
-
-`src/Main.lua` resolve `main` para um SHA de commit uma única vez e carrega todos os módulos usando o mesmo snapshot imutável.
-
-Também é possível fornecer explicitamente um commit ou tag:
-
-```lua
-getgenv().NEWZ_SOURCE_REF = "<commit-ou-tag>"
-```
-
-Para distribuição, prefira `dist/newz.lua`.
+O tracker continua conhecendo os cadáveres da pasta, mas apenas o conjunto ativo executa o caminho mais caro de bounds/visuals.
 
 ## Build
+
+`src/Main.lua` é bundle-only. Para gerar a distribuição:
 
 ```powershell
 python scripts/build.py

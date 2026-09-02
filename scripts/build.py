@@ -7,9 +7,18 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist" / "newz.lua"
 
 SOURCE_ORDER = (
-    "Main", "Config", "Profiler", "Bounds", "Visuals",
-    "Scheduler", "PlayerESP", "CorpseESP", "CorpseIllusion",
-    "ESP", "UI", "NeverLose",
+    "Main",
+    "Config",
+    "Profiler",
+    "Bounds",
+    "Visuals",
+    "Scheduler",
+    "PlayerESP",
+    "CorpseESP",
+    "Freecam",
+    "ESP",
+    "UI",
+    "NeverLose",
 )
 
 SOURCES = {
@@ -21,7 +30,7 @@ SOURCES = {
     "Scheduler": ROOT / "src" / "Core" / "Scheduler.lua",
     "PlayerESP": ROOT / "src" / "Modules" / "PlayerESP.lua",
     "CorpseESP": ROOT / "src" / "Modules" / "CorpseESP.lua",
-    "CorpseIllusion": ROOT / "src" / "Modules" / "CorpseIllusion.lua",
+    "Freecam": ROOT / "src" / "Modules" / "Freecam.lua",
     "ESP": ROOT / "src" / "Modules" / "ESP.lua",
     "UI": ROOT / "src" / "Ui.lua",
     "NeverLose": ROOT / "vendor" / "NeverLose.lua",
@@ -176,6 +185,7 @@ local function Decode(HexStr)
             )
 
         OutputIndex += 1
+
         KeyIndex =
             (KeyIndex % KeyLength)
             + 1
@@ -189,7 +199,8 @@ end
 local function Traceback(Error)
     if
         debug
-        and type(debug.traceback) == "function"
+        and type(debug.traceback)
+            == "function"
     then
         return debug.traceback(
             tostring(Error),
@@ -273,8 +284,8 @@ local PlayerESPModule =
 local CorpseESPModule =
     Execute("CorpseESP")
 
-local CorpseIllusionModule =
-    Execute("CorpseIllusion")
+local FreecamModule =
+    Execute("Freecam")
 
 local ESPModule =
     Execute("ESP")
@@ -295,7 +306,7 @@ Environment.NEWZ_BUNDLE = {{
 
     PlayerESPModule = PlayerESPModule,
     CorpseESPModule = CorpseESPModule,
-    CorpseIllusionModule = CorpseIllusionModule,
+    FreecamModule = FreecamModule,
     ESPModule = ESPModule,
 
     UIModule = UIModule,
@@ -326,6 +337,7 @@ return Result
 
 def main() -> None:
     sources = read_sources()
+
     bundle = build_bundle(
         sources
     )

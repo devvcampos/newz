@@ -5,7 +5,8 @@ local Environment =
 local function Traceback(Error)
     if
         debug
-        and type(debug.traceback) == "function"
+        and type(debug.traceback)
+            == "function"
     then
         return debug.traceback(
             tostring(Error),
@@ -19,7 +20,8 @@ end
 local function CleanupController(Controller)
     if
         Controller
-        and type(Controller.Destroy) == "function"
+        and type(Controller.Destroy)
+            == "function"
     then
         pcall(
             Controller.Destroy
@@ -56,8 +58,8 @@ local PlayerESPModule =
 local CorpseESPModule =
     Bundled.CorpseESPModule
 
-local CorpseIllusionModule =
-    Bundled.CorpseIllusionModule
+local FreecamModule =
+    Bundled.FreecamModule
 
 local ESPModule =
     Bundled.ESPModule
@@ -78,67 +80,78 @@ assert(
 
 assert(
     type(ProfilerModule) == "table"
-    and type(ProfilerModule.Init) == "function",
+    and type(ProfilerModule.Init)
+        == "function",
     "Profiler.lua invalido"
 )
 
 assert(
     type(BoundsModule) == "table"
-    and type(BoundsModule.New) == "function",
+    and type(BoundsModule.New)
+        == "function",
     "Bounds.lua invalido"
 )
 
 assert(
     type(VisualsModule) == "table"
-    and type(VisualsModule.New) == "function",
+    and type(VisualsModule.New)
+        == "function",
     "Visuals.lua invalido"
 )
 
 assert(
     type(SchedulerModule) == "table"
-    and type(SchedulerModule.New) == "function",
+    and type(SchedulerModule.New)
+        == "function",
     "Scheduler.lua invalido"
 )
 
 assert(
     type(PlayerESPModule) == "table"
-    and type(PlayerESPModule.Init) == "function",
+    and type(PlayerESPModule.Init)
+        == "function",
     "PlayerESP.lua invalido"
 )
 
 assert(
     type(CorpseESPModule) == "table"
-    and type(CorpseESPModule.Init) == "function",
+    and type(CorpseESPModule.Init)
+        == "function",
     "CorpseESP.lua invalido"
 )
 
 assert(
-    type(CorpseIllusionModule) == "table"
-    and type(CorpseIllusionModule.Init) == "function",
-    "CorpseIllusion.lua invalido"
+    type(FreecamModule) == "table"
+    and type(FreecamModule.Init)
+        == "function",
+    "Freecam.lua invalido"
 )
 
 assert(
     type(ESPModule) == "table"
-    and type(ESPModule.Init) == "function",
+    and type(ESPModule.Init)
+        == "function",
     "ESP.lua invalido"
 )
 
 assert(
     type(UIModule) == "table"
-    and type(UIModule.Init) == "function",
+    and type(UIModule.Init)
+        == "function",
     "Ui.lua invalido"
 )
 
 assert(
     type(NeverLose) == "table"
-    and type(NeverLose.CreateWindow) == "function",
+    and type(NeverLose.CreateWindow)
+        == "function",
     "NeverLose invalida"
 )
 
 if
     Environment.NEWZ
-    and type(Environment.NEWZ.Destroy) == "function"
+    and type(Environment.NEWZ.Destroy)
+        == "function"
 then
     pcall(
         Environment.NEWZ.Destroy
@@ -146,72 +159,100 @@ then
 end
 
 local Profiler
-local CorpseIllusionController
 local ESPController
+local FreecamController
 local UIController
 
-local InitSuccess, InitError =
-    xpcall(function()
-        Profiler =
-            ProfilerModule.Init(
-                Config
+local InitSuccess,
+    InitError =
+        xpcall(function()
+            Profiler =
+                ProfilerModule.Init(
+                    Config
+                )
+
+            assert(
+                type(Profiler)
+                    == "table",
+                "Profiler.Init nao retornou controller"
             )
 
-        assert(
-            type(Profiler) == "table",
-            "Profiler.Init nao retornou controller"
-        )
+            ESPController =
+                ESPModule.Init(
+                    Config,
+                    {
+                        Profiler =
+                            Profiler,
 
-        CorpseIllusionController =
-            CorpseIllusionModule.Init(
-                Config
+                        BoundsModule =
+                            BoundsModule,
+
+                        VisualsModule =
+                            VisualsModule,
+
+                        SchedulerModule =
+                            SchedulerModule,
+
+                        PlayerESPModule =
+                            PlayerESPModule,
+
+                        CorpseESPModule =
+                            CorpseESPModule,
+                    }
+                )
+
+            assert(
+                type(ESPController)
+                    == "table",
+                "ESP.Init nao retornou controller"
             )
 
-        assert(
-            type(CorpseIllusionController) == "table",
-            "CorpseIllusion.Init nao retornou controller"
-        )
+            FreecamController =
+                FreecamModule.Init(
+                    Config
+                )
 
-        ESPController =
-            ESPModule.Init(
-                Config,
-                {
-                    Profiler = Profiler,
-
-                    BoundsModule = BoundsModule,
-                    VisualsModule = VisualsModule,
-                    SchedulerModule = SchedulerModule,
-
-                    PlayerESPModule = PlayerESPModule,
-                    CorpseESPModule = CorpseESPModule,
-                }
+            assert(
+                type(FreecamController)
+                    == "table",
+                "Freecam.Init nao retornou controller"
             )
 
-        assert(
-            type(ESPController) == "table",
-            "ESP.Init nao retornou controller"
-        )
+            UIController =
+                UIModule.Init(
+                    Config,
+                    {
+                        NeverLose =
+                            NeverLose,
 
-        UIController =
-            UIModule.Init(
-                Config,
-                {
-                    NeverLose = NeverLose,
-                    CorpseIllusion = CorpseIllusionController,
-                }
+                        Freecam =
+                            FreecamController,
+                    }
+                )
+
+            assert(
+                type(UIController)
+                    == "table",
+                "UI.Init nao retornou controller"
             )
-
-        assert(
-            type(UIController) == "table",
-            "UI.Init nao retornou controller"
-        )
-    end, Traceback)
+        end, Traceback)
 
 if not InitSuccess then
-    CleanupController(UIController)
-    CleanupController(ESPController)
-    CleanupController(CorpseIllusionController)
-    CleanupController(Profiler)
+    CleanupController(
+        UIController
+    )
+
+    CleanupController(
+        FreecamController
+    )
+
+    CleanupController(
+        ESPController
+    )
+
+    CleanupController(
+        Profiler
+    )
 
     error(
         "Falha ao inicializar Newz:\n"
@@ -223,41 +264,59 @@ end
 local Project = {
     Config = Config,
     Profiler = Profiler,
-    CorpseIllusion = CorpseIllusionController,
     ESP = ESPController,
+    Freecam = FreecamController,
     UI = UIController,
     SourceRef = SourceRef,
 }
 
-local ProjectDestroyed = false
+local ProjectDestroyed =
+    false
 
 function Project.Destroy()
     if ProjectDestroyed then
         return
     end
 
-    ProjectDestroyed = true
+    ProjectDestroyed =
+        true
 
-    CleanupController(UIController)
-    CleanupController(ESPController)
-    CleanupController(CorpseIllusionController)
-    CleanupController(Profiler)
+    CleanupController(
+        UIController
+    )
+
+    CleanupController(
+        FreecamController
+    )
+
+    CleanupController(
+        ESPController
+    )
+
+    CleanupController(
+        Profiler
+    )
 
     UIController = nil
+    FreecamController = nil
     ESPController = nil
-    CorpseIllusionController = nil
     Profiler = nil
 
     Project.UI = nil
+    Project.Freecam = nil
     Project.ESP = nil
-    Project.CorpseIllusion = nil
     Project.Profiler = nil
 
-    if Environment.NEWZ == Project then
-        Environment.NEWZ = nil
+    if
+        Environment.NEWZ
+        == Project
+    then
+        Environment.NEWZ =
+            nil
     end
 end
 
-Environment.NEWZ = Project
+Environment.NEWZ =
+    Project
 
 return Project

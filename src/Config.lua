@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.4.4",
+    Version = "0.5.0",
 }
 
 Config.Runtime = {
@@ -53,21 +53,6 @@ Config.ESP = {
     MaxDistance = 1000,
 }
 
-Config.CorpseIllusion = {
-    TargetName = "",
-
-    -- Position of the visual-only copy relative to the local player.
-    Distance = 5,
-    VerticalOffset = 0,
-
-    -- Client-side player repositioning used by the Corpse Actions panel.
-    TeleportDistance = 4,
-    TeleportHeight = 3,
-
-    -- Local-only container created under Workspace.
-    ContainerName = "newz_LocalIllusions",
-}
-
 Config.Corpses = {
     Enabled = false,
 
@@ -77,7 +62,6 @@ Config.Corpses = {
     Name = true,
     Distance = true,
 
-    -- Keep all corpses tracked, but render only the nearest active set.
     MaxCorpses = 8,
     SelectionInterval = 0.25,
 
@@ -91,6 +75,27 @@ Config.Corpses = {
     CornerRatio = 0.25,
 
     MaxDistance = 500,
+}
+
+Config.Freecam = {
+    Enabled = false,
+
+    Keybind = "V",
+
+    Speed = 55,
+    BoostMultiplier = 3,
+
+    -- Degrees per mouse pixel.
+    MouseSensitivity = 0.12,
+
+    -- On normal exit, move the local character once to the
+    -- final camera position.
+    TeleportOnExit = true,
+
+    -- Try to place the character on a surface below the camera.
+    SnapToGround = true,
+    GroundProbeDistance = 200,
+    GroundOffset = 3,
 }
 
 return Config
