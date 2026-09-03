@@ -1,9 +1,13 @@
-Newz 0.5.0 patch
+Newz 0.6.0
 
-ADDED
-- src/Modules/Freecam.lua
+Added:
+- src/Features/AdvancedESP.lua
+- src/Features/PlayerTools.lua
+- src/Features/AimAssist.lua
+- src/Features/CharacterFeatures.lua
+- src/Features/FeatureInput.lua
 
-UPDATED
+Updated:
 - src/Config.lua
 - src/Main.lua
 - src/Ui.lua
@@ -11,32 +15,23 @@ UPDATED
 - scripts/check.py
 - README.md
 
-DELETE
-- src/Modules/CorpseIllusion.lua
-- REMOVE_OLD_CORPSE_ACTIONS.txt
+Feature map from reconstructed project:
+- Aimbot/Aim Assist: E
+- Invisible: I
+- Zoom: Z
+- Noclip: B
 
-FREECAM
-- V: toggle by default
-- WASD: move
-- Space: up
-- Ctrl: down
-- Shift: boost
-- Mouse: look
-- keybind, speed, boost and sensitivity are configurable
-- Teleport On Exit and Snap To Ground are configurable
+Preserved:
+- NeverLose UI
+- PlayerESP
+- CorpseESP
+- Freecam
+- profiler/core modular architecture
 
-The corpse visual/local preview has been removed completely.
-Corpse ESP remains.
+Not copied:
+- remote Stellar loader
+- remote sensoryESP loader
+- unidentified generic FireServer path
+- anti-cheat/detection-evasion behavior
 
-After replacing the files, run from the repository root:
-
-powershell -ExecutionPolicy Bypass -File .\cleanup_old_files.ps1
-python scripts/build.py
-python scripts/check.py --require-dist
-git status
-
-Then, if everything is correct:
-
-git add .
-git commit -m "Add freecam and remove corpse preview"
-git push origin main
+Freecam exit uses the ordinary client-side reposition behavior from the safe 0.5 implementation. No Glide/Velocity detector-evasion logic is included.

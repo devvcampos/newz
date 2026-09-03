@@ -106,28 +106,30 @@ function ESP.Init(Config, Dependencies)
         end
 
     ---------------------------------------------------------
-    -- SHARED GUI / CORE (SEGURANÇA: OCULTO NO COREGUI)
+    -- SHARED GUI / CORE
     ---------------------------------------------------------
 
-    -- Obtém o CoreGui escondido (se o executor tiver gethui) ou usa o CoreGui padrão
-    local CoreGui = (gethui and gethui()) or game:GetService("CoreGui")
-    
-    -- Gera um nome aleatório/ofuscado para a GUI
-    local GuiName = string.char(120, 121, 122, 65, 66) -- "xyzAB"
+    local PlayerGui =
+        LocalPlayer:WaitForChild(
+            "PlayerGui"
+        )
 
-    local OldGui = CoreGui:FindFirstChild(GuiName)
+    local OldGui =
+        PlayerGui:FindFirstChild(
+            "newz_ESP"
+        )
 
     if OldGui then
         OldGui:Destroy()
     end
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = GuiName
+    ScreenGui.Name = "newz_ESP"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
     ScreenGui.DisplayOrder = 999
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Parent = CoreGui
+    ScreenGui.Parent = PlayerGui
 
     local Bounds =
         BoundsModule.New({

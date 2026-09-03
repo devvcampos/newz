@@ -22,6 +22,12 @@ REQUIRED = [
     ROOT / "src" / "Modules" / "Freecam.lua",
     ROOT / "src" / "Modules" / "ESP.lua",
 
+    ROOT / "src" / "Features" / "AdvancedESP.lua",
+    ROOT / "src" / "Features" / "PlayerTools.lua",
+    ROOT / "src" / "Features" / "AimAssist.lua",
+    ROOT / "src" / "Features" / "CharacterFeatures.lua",
+    ROOT / "src" / "Features" / "FeatureInput.lua",
+
     ROOT / "vendor" / "NeverLose.lua",
     ROOT / "scripts" / "build.py",
 
@@ -43,13 +49,8 @@ STALE_TOKENS = {
     ],
 
     "src/Ui.lua": [
-        "EntitiesFolder",
-        "EntityFolderTimeout",
-        "PlayersOnly",
         "Compkiller",
         "CompKiller",
-        "corpses_loot",
-        "Loot Max Items",
         "CorpseIllusion",
         "BringCorpseToMe",
         "Go To Corpse",
@@ -59,9 +60,7 @@ STALE_TOKENS = {
 
     "src/Main.lua": [
         "LootESPModule",
-        "src/Modules/LootESP.lua",
         "CorpseActionsModule",
-        "src/Modules/CorpseActions.lua",
         "CorpseIllusionModule",
         "CorpseIllusionController",
 
@@ -78,36 +77,7 @@ STALE_TOKENS = {
     "scripts/build.py": [
         "CorpseIllusion",
     ],
-
-    "src/Modules/ESP.lua": [
-        "LootESPModule",
-        "LootModule",
-    ],
-
-    "src/Modules/CorpseESP.lua": [
-        "LootModule",
-        "LootPrepare",
-        "LootSync",
-        "LootSuspend",
-        "LootDestroyData",
-    ],
-
-    "README.md": [
-        "vendor/Compkiller.lua",
-        "LootESP.lua",
-        "Loot Max Items",
-        "CorpseIllusion.lua",
-        "Local Illusion",
-        "NEWZ_SOURCE_REF",
-    ],
 }
-
-FORBIDDEN_MONOLITH_TOKENS = [
-    "local function RegisterEntity(",
-    "local function RegisterCorpse(",
-    "local function ProjectPartFast(",
-    "local function UpdateCornerBox(",
-]
 
 FORBIDDEN_OLD_PATHS = [
     ROOT / "src" / "Modules" / "CorpseActions.lua",
@@ -115,6 +85,46 @@ FORBIDDEN_OLD_PATHS = [
     ROOT / "server" / "CorpseActions.server.lua",
     ROOT / "REMOVE_OLD_CORPSE_ACTIONS.txt",
 ]
+
+FEATURE_EXPECTATIONS = {
+    "src/Features/AdvancedESP.lua": [
+        "HealthBar",
+        "Skeleton",
+        "OffScreenArrows",
+        "Highlight",
+        "AdvancedText",
+    ],
+
+    "src/Features/PlayerTools.lua": [
+        "GetPlayerNames",
+        "GetInfo",
+        "Spectate",
+        "StopSpectate",
+    ],
+
+    "src/Features/AimAssist.lua": [
+        "GetMouseLocation",
+        "WorldToViewportPoint",
+        "Responsiveness",
+        "SetHeld",
+    ],
+
+    "src/Features/CharacterFeatures.lua": [
+        "LocalTransparencyModifier",
+        "CanCollide",
+        "SetZoom",
+        "SetNoclip",
+        "SetInvisible",
+    ],
+
+    "src/Features/FeatureInput.lua": [
+        "InputBegan",
+        "InputEnded",
+        "ToggleZoom",
+        "ToggleNoclip",
+        "ToggleInvisible",
+    ],
+}
 
 
 def main() -> int:
@@ -170,23 +180,62 @@ def main() -> int:
 
                 failed = True
 
-    facade = (
-        ROOT
-        / "src"
-        / "Modules"
-        / "ESP.lua"
-    )
+    for relative, tokens in FEATURE_EXPECTATIONS.items():
+        path = ROOT / relative
 
-    if facade.is_file():
-        facade_text = facade.read_text(
+        if not path.is_file():
+            continue
+
+        text = path.read_text(
             encoding="utf-8"
         )
 
-        for token in FORBIDDEN_MONOLITH_TOKENS:
-            if token in facade_text:
+        for token in tokens:
+            if token not in text:
                 print(
-                    "FAIL ESP facade contains implementation token "
-                    f"{token!r}"
+                    f"FAIL feature token {token!r} missing in {relative}"
+                )
+
+                failed = True
+
+    main_path = ROOT / "src" / "Main.lua"
+
+    if main_path.is_file():
+        main_text = main_path.read_text(
+            encoding="utf-8"
+        )
+
+        for token in [
+            "AdvancedESPModule",
+            "PlayerToolsModule",
+            "AimAssistModule",
+            "CharacterFeaturesModule",
+            "FeatureInputModule",
+        ]:
+            if token not in main_text:
+                print(
+                    f"FAIL Main missing integration token {token!r}"
+                )
+
+                failed = True
+
+    build_path = ROOT / "scripts" / "build.py"
+
+    if build_path.is_file():
+        build_text = build_path.read_text(
+            encoding="utf-8"
+        )
+
+        for token in [
+            '"AdvancedESP"',
+            '"PlayerTools"',
+            '"AimAssist"',
+            '"CharacterFeatures"',
+            '"FeatureInput"',
+        ]:
+            if token not in build_text:
+                print(
+                    f"FAIL build missing source token {token!r}"
                 )
 
                 failed = True

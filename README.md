@@ -1,32 +1,73 @@
 # Newz
 
-Ferramenta visual em Luau para diagnóstico autorizado de jogadores e entidades em um ambiente Roblox controlado.
+Ferramenta visual/modular em Luau para desenvolvimento e diagnóstico em ambiente Roblox controlado.
 
-## Estado atual
+## Versão 0.6.0
 
-A versão `0.5.0` mantém o Player ESP e o Corpse ESP modularizados e adiciona uma Freecam independente do sistema de ESP.
+A 0.6.0 mantém a interface NeverLose já usada pelo projeto e incorpora, na arquitetura do Newz, o conjunto de recursos que conseguimos reconstruir com alta confiança do projeto analisado.
 
-Recursos atuais:
+### Recursos existentes preservados
 
-- Player ESP com box `Corner` ou `Full`;
-- nome, vida, arma equipada e distância;
-- visibility check e team check;
-- Corpse ESP com box, nome e distância;
-- seleção periódica dos cadáveres mais próximos;
-- limite configurável de cadáveres ativos;
-- Freecam com tecla configurável;
-- movimento por WASD, Space/Ctrl e boost com Shift;
-- velocidade, boost e sensibilidade configuráveis;
-- opção de mover o personagem para a posição final da câmera ao sair;
-- opção de procurar o chão abaixo da câmera antes do reposicionamento;
-- profiler em tempo real;
-- projection engine calibrada por frame;
-- scheduler round-robin a 30 Hz por entidade;
-- build reproduzível em `dist/newz.lua`.
+- Player ESP modular;
+- Corpse ESP;
+- Freecam;
+- profiler;
+- projection/bounds engine;
+- scheduler;
+- build bundle-only em `dist/newz.lua`;
+- UI NeverLose vendorizada.
 
-O antigo módulo de ações/preview de cadáveres foi removido. O projeto mantém apenas o Corpse ESP.
+### Recursos adicionados
 
-## Arquitetura
+#### Advanced ESP
+
+- Outlines;
+- Health Bar;
+- porcentagem de vida opcional;
+- Skeleton;
+- flags de movimento (`Idle`, `Moving`, `Jumping`);
+- Off-Screen Arrows;
+- Highlight Chams;
+- texto avançado de nome/distância;
+- posição `Bottom`, `Top` ou `Side`.
+
+#### Player Tools
+
+- seleção de player;
+- atualização automática da lista;
+- nome/display name;
+- vida;
+- distância;
+- friend status;
+- visibilidade;
+- team;
+- Spectate;
+- Stop Spectate.
+
+#### Aim Assist
+
+- tecla padrão `E`;
+- modo Hold ou Toggle;
+- seleção por FOV;
+- alvo configurável (`Head`, `HumanoidRootPart`, `UpperTorso`, `Torso`);
+- Max Distance;
+- Team Check;
+- Visibility Check;
+- círculo de FOV;
+- resposta determinística de câmera.
+
+Não existe randomização/humanização de input ou lógica adicionada para esconder o recurso de sistemas de detecção.
+
+#### Character / Movement
+
+- Zoom, tecla padrão `Z`;
+- Invisible local, tecla padrão `I`;
+- Noclip, tecla padrão `B`;
+- Freecam permanece em `V` por padrão.
+
+`Invisible` usa `LocalTransparencyModifier`, portanto é um efeito visual local. `Noclip` altera colisão das partes do personagem no cliente.
+
+## Estrutura
 
 ```text
 newz/
@@ -41,11 +82,18 @@ newz/
 │  │  ├─ Visuals.lua
 │  │  └─ Scheduler.lua
 │  │
-│  └─ Modules/
-│     ├─ PlayerESP.lua
-│     ├─ CorpseESP.lua
-│     ├─ Freecam.lua
-│     └─ ESP.lua
+│  ├─ Modules/
+│  │  ├─ PlayerESP.lua
+│  │  ├─ CorpseESP.lua
+│  │  ├─ Freecam.lua
+│  │  └─ ESP.lua
+│  │
+│  └─ Features/
+│     ├─ AdvancedESP.lua
+│     ├─ PlayerTools.lua
+│     ├─ AimAssist.lua
+│     ├─ CharacterFeatures.lua
+│     └─ FeatureInput.lua
 │
 ├─ vendor/
 │  └─ NeverLose.lua
@@ -54,100 +102,91 @@ newz/
 │  ├─ build.py
 │  └─ check.py
 │
-├─ dist/
-│  └─ newz.lua
-│
-├─ THIRD_PARTY_NOTICES.md
-└─ README.md
+└─ dist/
+   └─ newz.lua
 ```
 
-## Modules
+## Arquitetura
 
-`PlayerESP.lua` é responsável pelo lifecycle e renderização dos jogadores, incluindo streaming, humanoid, arma equipada e visibility.
+`ESP.lua` continua sendo o orquestrador do Player ESP e Corpse ESP existentes.
 
-`CorpseESP.lua` acompanha os Models em `Workspace.Corpses`, mas apenas os cadáveres mais próximos dentro de `MaxDistance` entram no conjunto ativo de renderização, limitado por `MaxCorpses`.
+`AdvancedESP.lua` é uma camada visual adicional. Isso evita transformar `PlayerESP.lua` num monólito e permite ligar apenas os recursos extras quando necessário.
 
-`Freecam.lua` controla uma câmera `Scriptable` sem mover continuamente o personagem. Ao sair normalmente, `TeleportOnExit` pode reposicionar o personagem uma única vez para a posição final da câmera.
+`PlayerTools.lua` concentra seleção de player, informações e spectate.
 
-`ESP.lua` funciona como facade/orquestrador do Player ESP e Corpse ESP.
+`AimAssist.lua` concentra seleção de alvo, FOV e resposta da câmera.
+
+`CharacterFeatures.lua` concentra Zoom, Noclip e Invisible local.
+
+`FeatureInput.lua` é o roteador de teclas das features novas.
+
+## UI
+
+A biblioteca de UI não foi trocada. A NeverLose continua sendo usada pelo `Ui.lua`; apenas novas seções e controles foram adicionados ao layout existente.
+
+Principais áreas:
+
+```text
+Players
+├─ ESP
+├─ Filters
+├─ Appearance
+├─ Advanced ESP
+├─ Advanced Colors
+└─ Player Tools
+
+Movement
+├─ Freecam
+├─ Exit Behavior
+├─ Aim Assist
+├─ Aim Filters
+└─ Character
+
+Corpses
+├─ Corpse ESP
+└─ Appearance
+
+Settings
+├─ Interface
+├─ Diagnostics
+└─ Project
+```
 
 ## Freecam
 
-Configuração padrão:
+A Freecam mantém o personagem real parado enquanto a câmera está livre. O reposicionamento opcional ao sair é uma tentativa cliente comum e pode ser corrigido pelo servidor da experiência.
 
-```lua
-Config.Freecam = {
-    Keybind = "V",
-    Speed = 55,
-    BoostMultiplier = 3,
-    MouseSensitivity = 0.12,
-    TeleportOnExit = true,
-    SnapToGround = true,
-}
-```
-
-Controles:
+Controles padrão:
 
 ```text
-V                 liga/desliga por padrão
-WASD              movimentação horizontal
-Space             subir
-Ctrl              descer
-Shift             boost
-Mouse             olhar
+V          Freecam
+WASD       movimento
+Space      subir
+Ctrl       descer
+Shift      boost
+Mouse      olhar
 ```
-
-A tecla pode ser alterada pela interface.
-
-Enquanto a Freecam está ativa, o módulo usa `ContextActionService` para consumir os controles de movimento e evita que WASD mova o personagem ao mesmo tempo.
-
-Quando a Freecam é desligada normalmente com `TeleportOnExit = true`, o módulo tenta mover o personagem para a posição final da câmera. Com `SnapToGround = true`, um raycast procura uma superfície abaixo da câmera antes do reposicionamento.
-
-O reposicionamento é iniciado no cliente. Uma experiência com autoridade/correção server-side pode rejeitar ou corrigir essa mudança.
-
-Ao descarregar o Newz, a câmera é restaurada sem reposicionar o personagem.
-
-## Corpse selection
-
-Por padrão:
-
-```text
-MaxDistance = 500 studs
-MaxCorpses = 8
-SelectionInterval = 0.25 s
-```
-
-O tracker continua conhecendo os cadáveres da pasta, mas apenas o conjunto ativo executa o caminho mais caro de bounds/visuals.
 
 ## Build
 
-`src/Main.lua` é bundle-only. Para gerar a distribuição:
+Na raiz do projeto:
 
 ```powershell
 python scripts/build.py
 python scripts/check.py --require-dist
 ```
 
-O build incorpora Main, Config, Core, Modules, UI e NeverLose em um artefato autocontido.
+Se tudo passar:
 
-## Profiler
-
-Na interface:
-
-```text
-Settings
-└─ Diagnostics
-   ├─ Profiler
-   ├─ Profiler Overlay
-   └─ Report Interval
+```powershell
+git status
+git add .
+git commit -m "Add reconstructed feature suite"
+git push origin main
 ```
 
-O profiler mede trabalho CPU-side do Newz. Ele não representa o custo total de GPU, física, renderização ou scripts internos da experiência.
+## Nota sobre a reconstrução
 
-## Terceiros
+As features foram implementadas no padrão arquitetural do Newz a partir dos comportamentos que conseguimos recuperar do projeto analisado. Isso não significa que nomes de variáveis, divisão original de arquivos ou implementação interna sejam idênticos ao código-fonte pré-ofuscação.
 
-A NeverLose vendorizada declara licença MIT em seu cabeçalho. Consulte `THIRD_PARTY_NOTICES.md`.
-
-## Uso
-
-Este projeto deve ser usado somente em experiências, ambientes e servidores nos quais o operador tenha autorização para desenvolvimento, diagnóstico ou teste.
+Também não foi copiado o loader remoto do projeto analisado. As funcionalidades foram implementadas localmente dentro do Newz, mantendo o bundle autocontido.

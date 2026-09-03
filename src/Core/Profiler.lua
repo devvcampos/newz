@@ -28,25 +28,21 @@ function Profiler.Init(Config)
     local WindowFramePeak = 0
     local LastEnabled = false
 
-    local CoreGui = (gethui and gethui()) or game:GetService("CoreGui")
-    
-    -- Gera um nome aleatório/ofuscado para a GUI
-    local GuiName = string.char(80, 114, 111, 102, 88) -- "ProfX"
-
-    local OldGui = CoreGui:FindFirstChild(GuiName)
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local OldGui = PlayerGui:FindFirstChild("newz_Profiler")
 
     if OldGui then
         OldGui:Destroy()
     end
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = GuiName
+    ScreenGui.Name = "newz_Profiler"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.IgnoreGuiInset = true
     ScreenGui.DisplayOrder = 1001
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ScreenGui.Enabled = false
-    ScreenGui.Parent = CoreGui
+    ScreenGui.Parent = PlayerGui
 
     local Panel = Instance.new("Frame")
     Panel.Name = "Panel"
@@ -146,7 +142,6 @@ function Profiler.Init(Config)
     local function RefreshOverlay()
         local PlayersTracked = Snapshot.Gauges.PlayersTracked or 0
         local CorpsesTracked = Snapshot.Gauges.CorpsesTracked or 0
-        local CorpsesSelected = Snapshot.Gauges.CorpsesSelected or 0
         local PlayerUpdates = Snapshot.Counters.PlayerUpdates or 0
         local CorpseUpdates = Snapshot.Counters.CorpseUpdates or 0
         local Render = Snapshot.Metrics["Newz.Render"]
@@ -174,10 +169,9 @@ function Profiler.Init(Config)
                 FrameShare
             ),
             string.format(
-                "Tracked: players %d | corpses %d | active %d",
+                "Tracked: players %d | corpses %d",
                 PlayersTracked,
-                CorpsesTracked,
-                CorpsesSelected
+                CorpsesTracked
             ),
             string.format(
                 "Updates/s: players %d | corpses %d",
@@ -192,7 +186,7 @@ function Profiler.Init(Config)
             FormatMetric("Corpses.Update", "Corpse update"),
             FormatMetric("Corpses.Bounds", "Corpse bounds"),
             FormatMetric("Corpses.Visuals", "Corpse visuals"),
-            FormatMetric("Corpses.Selection", "Corpse select"),
+            FormatMetric("Corpses.LootRefresh", "Loot refresh"),
         }, "\n")
     end
 

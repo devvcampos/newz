@@ -17,11 +17,14 @@ local function Traceback(Error)
     return tostring(Error)
 end
 
-local function CleanupController(Controller)
+local function CleanupController(
+    Controller
+)
     if
         Controller
-        and type(Controller.Destroy)
-            == "function"
+        and type(
+            Controller.Destroy
+        ) == "function"
     then
         pcall(
             Controller.Destroy
@@ -63,6 +66,21 @@ local FreecamModule =
 
 local ESPModule =
     Bundled.ESPModule
+
+local AdvancedESPModule =
+    Bundled.AdvancedESPModule
+
+local PlayerToolsModule =
+    Bundled.PlayerToolsModule
+
+local AimAssistModule =
+    Bundled.AimAssistModule
+
+local CharacterFeaturesModule =
+    Bundled.CharacterFeaturesModule
+
+local FeatureInputModule =
+    Bundled.FeatureInputModule
 
 local UIModule =
     Bundled.UIModule
@@ -135,6 +153,41 @@ assert(
 )
 
 assert(
+    type(AdvancedESPModule) == "table"
+    and type(AdvancedESPModule.Init)
+        == "function",
+    "AdvancedESP.lua invalido"
+)
+
+assert(
+    type(PlayerToolsModule) == "table"
+    and type(PlayerToolsModule.Init)
+        == "function",
+    "PlayerTools.lua invalido"
+)
+
+assert(
+    type(AimAssistModule) == "table"
+    and type(AimAssistModule.Init)
+        == "function",
+    "AimAssist.lua invalido"
+)
+
+assert(
+    type(CharacterFeaturesModule) == "table"
+    and type(CharacterFeaturesModule.Init)
+        == "function",
+    "CharacterFeatures.lua invalido"
+)
+
+assert(
+    type(FeatureInputModule) == "table"
+    and type(FeatureInputModule.Init)
+        == "function",
+    "FeatureInput.lua invalido"
+)
+
+assert(
     type(UIModule) == "table"
     and type(UIModule.Init)
         == "function",
@@ -150,8 +203,9 @@ assert(
 
 if
     Environment.NEWZ
-    and type(Environment.NEWZ.Destroy)
-        == "function"
+    and type(
+        Environment.NEWZ.Destroy
+    ) == "function"
 then
     pcall(
         Environment.NEWZ.Destroy
@@ -160,7 +214,12 @@ end
 
 local Profiler
 local ESPController
+local AdvancedESPController
 local FreecamController
+local PlayerToolsController
+local AimAssistController
+local CharacterFeaturesController
+local FeatureInputController
 local UIController
 
 local InitSuccess,
@@ -207,6 +266,17 @@ local InitSuccess,
                 "ESP.Init nao retornou controller"
             )
 
+            AdvancedESPController =
+                AdvancedESPModule.Init(
+                    Config
+                )
+
+            assert(
+                type(AdvancedESPController)
+                    == "table",
+                "AdvancedESP.Init nao retornou controller"
+            )
+
             FreecamController =
                 FreecamModule.Init(
                     Config
@@ -218,6 +288,57 @@ local InitSuccess,
                 "Freecam.Init nao retornou controller"
             )
 
+            PlayerToolsController =
+                PlayerToolsModule.Init(
+                    Config
+                )
+
+            assert(
+                type(PlayerToolsController)
+                    == "table",
+                "PlayerTools.Init nao retornou controller"
+            )
+
+            AimAssistController =
+                AimAssistModule.Init(
+                    Config
+                )
+
+            assert(
+                type(AimAssistController)
+                    == "table",
+                "AimAssist.Init nao retornou controller"
+            )
+
+            CharacterFeaturesController =
+                CharacterFeaturesModule.Init(
+                    Config
+                )
+
+            assert(
+                type(CharacterFeaturesController)
+                    == "table",
+                "CharacterFeatures.Init nao retornou controller"
+            )
+
+            FeatureInputController =
+                FeatureInputModule.Init(
+                    Config,
+                    {
+                        AimAssist =
+                            AimAssistController,
+
+                        CharacterFeatures =
+                            CharacterFeaturesController,
+                    }
+                )
+
+            assert(
+                type(FeatureInputController)
+                    == "table",
+                "FeatureInput.Init nao retornou controller"
+            )
+
             UIController =
                 UIModule.Init(
                     Config,
@@ -227,6 +348,18 @@ local InitSuccess,
 
                         Freecam =
                             FreecamController,
+
+                        PlayerTools =
+                            PlayerToolsController,
+
+                        AimAssist =
+                            AimAssistController,
+
+                        CharacterFeatures =
+                            CharacterFeaturesController,
+
+                        AdvancedESP =
+                            AdvancedESPController,
                     }
                 )
 
@@ -243,7 +376,27 @@ if not InitSuccess then
     )
 
     CleanupController(
+        FeatureInputController
+    )
+
+    CleanupController(
+        CharacterFeaturesController
+    )
+
+    CleanupController(
+        AimAssistController
+    )
+
+    CleanupController(
+        PlayerToolsController
+    )
+
+    CleanupController(
         FreecamController
+    )
+
+    CleanupController(
+        AdvancedESPController
     )
 
     CleanupController(
@@ -262,12 +415,38 @@ if not InitSuccess then
 end
 
 local Project = {
-    Config = Config,
-    Profiler = Profiler,
-    ESP = ESPController,
-    Freecam = FreecamController,
-    UI = UIController,
-    SourceRef = SourceRef,
+    Config =
+        Config,
+
+    Profiler =
+        Profiler,
+
+    ESP =
+        ESPController,
+
+    AdvancedESP =
+        AdvancedESPController,
+
+    Freecam =
+        FreecamController,
+
+    PlayerTools =
+        PlayerToolsController,
+
+    AimAssist =
+        AimAssistController,
+
+    CharacterFeatures =
+        CharacterFeaturesController,
+
+    FeatureInput =
+        FeatureInputController,
+
+    UI =
+        UIController,
+
+    SourceRef =
+        SourceRef,
 }
 
 local ProjectDestroyed =
@@ -286,7 +465,27 @@ function Project.Destroy()
     )
 
     CleanupController(
+        FeatureInputController
+    )
+
+    CleanupController(
+        CharacterFeaturesController
+    )
+
+    CleanupController(
+        AimAssistController
+    )
+
+    CleanupController(
+        PlayerToolsController
+    )
+
+    CleanupController(
         FreecamController
+    )
+
+    CleanupController(
+        AdvancedESPController
     )
 
     CleanupController(
@@ -297,15 +496,59 @@ function Project.Destroy()
         Profiler
     )
 
-    UIController = nil
-    FreecamController = nil
-    ESPController = nil
-    Profiler = nil
+    UIController =
+        nil
 
-    Project.UI = nil
-    Project.Freecam = nil
-    Project.ESP = nil
-    Project.Profiler = nil
+    FeatureInputController =
+        nil
+
+    CharacterFeaturesController =
+        nil
+
+    AimAssistController =
+        nil
+
+    PlayerToolsController =
+        nil
+
+    FreecamController =
+        nil
+
+    AdvancedESPController =
+        nil
+
+    ESPController =
+        nil
+
+    Profiler =
+        nil
+
+    Project.UI =
+        nil
+
+    Project.FeatureInput =
+        nil
+
+    Project.CharacterFeatures =
+        nil
+
+    Project.AimAssist =
+        nil
+
+    Project.PlayerTools =
+        nil
+
+    Project.Freecam =
+        nil
+
+    Project.AdvancedESP =
+        nil
+
+    Project.ESP =
+        nil
+
+    Project.Profiler =
+        nil
 
     if
         Environment.NEWZ

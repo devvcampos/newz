@@ -17,6 +17,11 @@ SOURCE_ORDER = (
     "CorpseESP",
     "Freecam",
     "ESP",
+    "AdvancedESP",
+    "PlayerTools",
+    "AimAssist",
+    "CharacterFeatures",
+    "FeatureInput",
     "UI",
     "NeverLose",
 )
@@ -32,6 +37,11 @@ SOURCES = {
     "CorpseESP": ROOT / "src" / "Modules" / "CorpseESP.lua",
     "Freecam": ROOT / "src" / "Modules" / "Freecam.lua",
     "ESP": ROOT / "src" / "Modules" / "ESP.lua",
+    "AdvancedESP": ROOT / "src" / "Features" / "AdvancedESP.lua",
+    "PlayerTools": ROOT / "src" / "Features" / "PlayerTools.lua",
+    "AimAssist": ROOT / "src" / "Features" / "AimAssist.lua",
+    "CharacterFeatures": ROOT / "src" / "Features" / "CharacterFeatures.lua",
+    "FeatureInput": ROOT / "src" / "Features" / "FeatureInput.lua",
     "UI": ROOT / "src" / "Ui.lua",
     "NeverLose": ROOT / "vendor" / "NeverLose.lua",
 }
@@ -88,8 +98,10 @@ def xor_hex_encrypt(
     key_bytes = key.encode("utf-8")
 
     encrypted = bytes(
-        b ^ key_bytes[i % len(key_bytes)]
-        for i, b in enumerate(data)
+        byte
+        ^ key_bytes[index % len(key_bytes)]
+        for index, byte
+        in enumerate(data)
     )
 
     return encrypted.hex()
@@ -290,6 +302,21 @@ local FreecamModule =
 local ESPModule =
     Execute("ESP")
 
+local AdvancedESPModule =
+    Execute("AdvancedESP")
+
+local PlayerToolsModule =
+    Execute("PlayerTools")
+
+local AimAssistModule =
+    Execute("AimAssist")
+
+local CharacterFeaturesModule =
+    Execute("CharacterFeatures")
+
+local FeatureInputModule =
+    Execute("FeatureInput")
+
 local UIModule =
     Execute("UI")
 
@@ -308,6 +335,12 @@ Environment.NEWZ_BUNDLE = {{
     CorpseESPModule = CorpseESPModule,
     FreecamModule = FreecamModule,
     ESPModule = ESPModule,
+
+    AdvancedESPModule = AdvancedESPModule,
+    PlayerToolsModule = PlayerToolsModule,
+    AimAssistModule = AimAssistModule,
+    CharacterFeaturesModule = CharacterFeaturesModule,
+    FeatureInputModule = FeatureInputModule,
 
     UIModule = UIModule,
     NeverLose = NeverLose,
