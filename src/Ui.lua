@@ -56,6 +56,12 @@ function UI.Init(
     local AdvancedESP =
         Dependencies.AdvancedESP
 
+    local SensoryESP =
+        Dependencies.SensoryESP
+
+    local RemoteBridge =
+        Dependencies.RemoteBridge
+
     assert(
         type(NeverLose.CreateWindow)
             == "function",
@@ -105,6 +111,22 @@ function UI.Init(
         "AdvancedESP invalido"
     )
 
+    assert(
+        type(SensoryESP) == "table"
+        and type(SensoryESP.SetEnabled)
+            == "function"
+        and type(SensoryESP.Load)
+            == "function",
+        "SensoryESP invalido"
+    )
+
+    assert(
+        type(RemoteBridge) == "table"
+        and type(RemoteBridge.FireTest)
+            == "function",
+        "RemoteBridge invalido"
+    )
+
     local Destroyed = false
     local Threads = {}
     local Window
@@ -130,6 +152,10 @@ function UI.Init(
         )
 
         CharacterFeatures.SetStateChangedCallback(
+            nil
+        )
+
+        SensoryESP.SetStateChangedCallback(
             nil
         )
 
@@ -1854,61 +1880,47 @@ function UI.Init(
                     end
                 )
 
-                local FreecamExitSection =
+                local FreecamBehaviorSection =
                     MovementTab:
                         AddSection({
                             Name =
-                                "Exit Behavior",
+                                "Recovered Behavior",
 
                             Position =
                                 "right",
                         })
 
-                AddToggle(
-                    FreecamExitSection,
-                    "Teleport On Exit",
-                    "freecam_teleport_exit",
-                    Config.Freecam.TeleportOnExit
-                        ~= false,
-                    function(Value)
-                        Freecam.SetTeleportOnExit(
-                            Value
-                        )
-                    end
-                )
+                FreecamBehaviorSection:
+                    AddLabel(
+                        "Scriptable camera only",
+                        true
+                    )
 
-                AddToggle(
-                    FreecamExitSection,
-                    "Snap To Ground",
-                    "freecam_snap_ground",
-                    Config.Freecam.SnapToGround
-                        ~= false,
-                    function(Value)
-                        Freecam.SetSnapToGround(
-                            Value
-                        )
-                    end
-                )
+                FreecamBehaviorSection:
+                    AddLabel(
+                        "Character stays in place",
+                        true
+                    )
 
-                FreecamExitSection:
+                FreecamBehaviorSection:
                     AddLabel(
                         "WASD: move",
                         true
                     )
 
-                FreecamExitSection:
+                FreecamBehaviorSection:
                     AddLabel(
                         "Space / Ctrl: up / down",
                         true
                     )
 
-                FreecamExitSection:
+                FreecamBehaviorSection:
                     AddLabel(
                         "Shift: boost",
                         true
                     )
 
-                FreecamExitSection:
+                FreecamBehaviorSection:
                     AddLabel(
                         "Mouse: look",
                         true
@@ -2250,6 +2262,140 @@ function UI.Init(
                         true
                     )
 
+                local IntegrationsSection =
+                    SettingsTab:
+                        AddSection({
+                            Name =
+                                "Integrations",
+
+                            Position =
+                                "right",
+                        })
+
+                local SensoryStatus =
+                    IntegrationsSection:
+                        AddLabel(
+                            "sensoryESP: OFF",
+                            true
+                        )
+
+                AddToggle(
+                    IntegrationsSection,
+                    "Remote sensoryESP",
+                    "external_sensory_esp",
+                    Config.ExternalESP.Enabled == true,
+                    function(Value)
+                        local Ok, Message =
+                            SensoryESP.SetEnabled(
+                                Value
+                            )
+
+                        if not Ok then
+                            SensoryStatus:
+                                SetText(
+                                    "sensoryESP: error - "
+                                    .. tostring(Message)
+                                )
+                        end
+                    end
+                )
+
+                SensoryESP.SetStateChangedCallback(
+                    function(Loaded, ErrorMessage)
+                        if Destroyed then
+                            return
+                        end
+
+                        if ErrorMessage then
+                            SensoryStatus:
+                                SetText(
+                                    "sensoryESP: error - "
+                                    .. tostring(ErrorMessage)
+                                )
+                        else
+                            SensoryStatus:
+                                SetText(
+                                    Loaded
+                                    and "sensoryESP: ON"
+                                    or "sensoryESP: OFF"
+                                )
+                        end
+                    end
+                )
+
+                IntegrationsSection:
+                    AddButton({
+                        Name =
+                            "Refresh sensoryESP",
+
+                        Callback =
+                            function()
+                                local Ok, Message =
+                                    SensoryESP.Refresh()
+
+                                SensoryStatus:
+                                    SetText(
+                                        Ok
+                                        and "sensoryESP: refreshed"
+                                        or "sensoryESP: " .. tostring(Message)
+                                    )
+                            end,
+                    })
+
+                local RemoteStatus =
+                    IntegrationsSection:
+                        AddLabel(
+                            "FireServer bridge: OFF",
+                            true
+                        )
+
+                AddToggle(
+                    IntegrationsSection,
+                    "Configured FireServer bridge",
+                    "remote_bridge_enabled",
+                    Config.RemoteBridge.Enabled == true,
+                    function(Value)
+                        RemoteBridge.SetEnabled(
+                            Value
+                        )
+
+                        RemoteStatus:
+                            SetText(
+                                Value
+                                and "FireServer bridge: ON"
+                                or "FireServer bridge: OFF"
+                            )
+                    end
+                )
+
+                IntegrationsSection:
+                    AddButton({
+                        Name =
+                            "Fire Test Event",
+
+                        ToolTip =
+                            "Calls only the RemoteEvent path configured in Config.RemoteBridge.",
+
+                        Callback =
+                            function()
+                                local Ok, Message =
+                                    RemoteBridge.FireTest()
+
+                                RemoteStatus:
+                                    SetText(
+                                        Ok
+                                        and "FireServer bridge: sent"
+                                        or "FireServer bridge: " .. tostring(Message)
+                                    )
+                            end,
+                    })
+
+                IntegrationsSection:
+                    AddLabel(
+                        "Stellar remote loader: not included",
+                        true
+                    )
+
                 local ProjectSection =
                     SettingsTab:
                         AddSection({
@@ -2280,7 +2426,7 @@ function UI.Init(
 
                 ProjectSection:
                     AddLabel(
-                        "Runtime: ESP + Advanced ESP + Combat + Player Tools + Movement",
+                        "Runtime: ESP + Advanced ESP + Combat + Player Tools + Movement + Integrations",
                         true
                     )
 

@@ -82,6 +82,12 @@ local CharacterFeaturesModule =
 local FeatureInputModule =
     Bundled.FeatureInputModule
 
+local SensoryESPModule =
+    Bundled.SensoryESPModule
+
+local RemoteBridgeModule =
+    Bundled.RemoteBridgeModule
+
 local UIModule =
     Bundled.UIModule
 
@@ -188,6 +194,20 @@ assert(
 )
 
 assert(
+    type(SensoryESPModule) == "table"
+    and type(SensoryESPModule.Init)
+        == "function",
+    "SensoryESP.lua invalido"
+)
+
+assert(
+    type(RemoteBridgeModule) == "table"
+    and type(RemoteBridgeModule.Init)
+        == "function",
+    "RemoteBridge.lua invalido"
+)
+
+assert(
     type(UIModule) == "table"
     and type(UIModule.Init)
         == "function",
@@ -220,6 +240,8 @@ local PlayerToolsController
 local AimAssistController
 local CharacterFeaturesController
 local FeatureInputController
+local SensoryESPController
+local RemoteBridgeController
 local UIController
 
 local InitSuccess,
@@ -339,6 +361,28 @@ local InitSuccess,
                 "FeatureInput.Init nao retornou controller"
             )
 
+            SensoryESPController =
+                SensoryESPModule.Init(
+                    Config
+                )
+
+            assert(
+                type(SensoryESPController)
+                    == "table",
+                "SensoryESP.Init nao retornou controller"
+            )
+
+            RemoteBridgeController =
+                RemoteBridgeModule.Init(
+                    Config
+                )
+
+            assert(
+                type(RemoteBridgeController)
+                    == "table",
+                "RemoteBridge.Init nao retornou controller"
+            )
+
             UIController =
                 UIModule.Init(
                     Config,
@@ -360,6 +404,12 @@ local InitSuccess,
 
                         AdvancedESP =
                             AdvancedESPController,
+
+                        SensoryESP =
+                            SensoryESPController,
+
+                        RemoteBridge =
+                            RemoteBridgeController,
                     }
                 )
 
@@ -373,6 +423,14 @@ local InitSuccess,
 if not InitSuccess then
     CleanupController(
         UIController
+    )
+
+    CleanupController(
+        RemoteBridgeController
+    )
+
+    CleanupController(
+        SensoryESPController
     )
 
     CleanupController(
@@ -442,6 +500,12 @@ local Project = {
     FeatureInput =
         FeatureInputController,
 
+    SensoryESP =
+        SensoryESPController,
+
+    RemoteBridge =
+        RemoteBridgeController,
+
     UI =
         UIController,
 
@@ -462,6 +526,14 @@ function Project.Destroy()
 
     CleanupController(
         UIController
+    )
+
+    CleanupController(
+        RemoteBridgeController
+    )
+
+    CleanupController(
+        SensoryESPController
     )
 
     CleanupController(
@@ -499,6 +571,12 @@ function Project.Destroy()
     UIController =
         nil
 
+    RemoteBridgeController =
+        nil
+
+    SensoryESPController =
+        nil
+
     FeatureInputController =
         nil
 
@@ -524,6 +602,12 @@ function Project.Destroy()
         nil
 
     Project.UI =
+        nil
+
+    Project.RemoteBridge =
+        nil
+
+    Project.SensoryESP =
         nil
 
     Project.FeatureInput =

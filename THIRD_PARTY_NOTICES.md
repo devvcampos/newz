@@ -29,3 +29,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## sensoryESP remote integration
+
+Newz 0.6.1 contains an optional runtime loader pointing to:
+
+`https://raw.githubusercontent.com/rthusrtghdfhtyjkehrfh/sensoryESP/main/ESP.lua`
+
+The sensoryESP source is not vendored in this archive. When the optional loader is enabled, the runtime retrieves the upstream source directly. Review the upstream project and its applicable terms before enabling or distributing that integration.

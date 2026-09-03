@@ -1,37 +1,34 @@
-Newz 0.6.0
+Newz 0.6.1
 
 Added:
-- src/Features/AdvancedESP.lua
-- src/Features/PlayerTools.lua
-- src/Features/AimAssist.lua
-- src/Features/CharacterFeatures.lua
-- src/Features/FeatureInput.lua
+- src/Integrations/SensoryESP.lua
+- src/Integrations/RemoteBridge.lua
 
 Updated:
 - src/Config.lua
 - src/Main.lua
 - src/Ui.lua
+- src/Modules/Freecam.lua
 - scripts/build.py
 - scripts/check.py
 - README.md
+- THIRD_PARTY_NOTICES.md
 
-Feature map from reconstructed project:
-- Aimbot/Aim Assist: E
-- Invisible: I
-- Zoom: Z
-- Noclip: B
+Integration decisions:
+- Stellar remote loader: NOT included.
+- sensoryESP remote loader: included, disabled by default, manual/optional.
+- FireServer path: included only as an explicit Config.RemoteBridge RemoteEvent path owned by the project; disabled by default.
+- Friend-style/recovered Freecam: Scriptable camera, RenderStepped, GetMouseDelta, keyboard movement; no character teleport/reposition on exit.
 
 Preserved:
 - NeverLose UI
 - PlayerESP
 - CorpseESP
-- Freecam
+- AdvancedESP
+- PlayerTools
+- AimAssist
+- Zoom / Noclip / Invisible local
 - profiler/core modular architecture
 
-Not copied:
-- remote Stellar loader
-- remote sensoryESP loader
-- unidentified generic FireServer path
-- anti-cheat/detection-evasion behavior
-
-Freecam exit uses the ordinary client-side reposition behavior from the safe 0.5 implementation. No Glide/Velocity detector-evasion logic is included.
+Safety/accuracy note:
+The unidentified RemoteEvent from the analyzed project was not guessed or replayed. Configure Config.RemoteBridge.Path to a RemoteEvent in your own game before enabling the bridge.

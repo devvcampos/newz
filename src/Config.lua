@@ -2,7 +2,7 @@ local Config = {}
 
 Config.Project = {
     Name = "Newz",
-    Version = "0.6.0",
+    Version = "0.6.1",
 }
 
 Config.Runtime = {
@@ -147,13 +147,34 @@ Config.Freecam = {
     BoostMultiplier = 3,
     MouseSensitivity = 0.12,
 
-    -- Freecam keeps the real character in place while active.
-    -- On normal exit this performs one ordinary client-side reposition attempt.
-    TeleportOnExit = true,
+    -- Recovered-style freecam: Scriptable camera only.
+    -- The real character is not repositioned on exit.
+    Style = "Recovered",
+}
 
-    SnapToGround = true,
-    GroundProbeDistance = 200,
-    GroundOffset = 3,
+Config.ExternalESP = {
+    -- Optional remote sensoryESP loader recovered from the other project.
+    -- NeverLose remains the Newz UI. Stellar is intentionally not loaded.
+    Enabled = false,
+    AutoLoad = false,
+
+    URL =
+        "https://raw.githubusercontent.com/rthusrtghdfhtyjkehrfh/sensoryESP/main/ESP.lua",
+}
+
+Config.RemoteBridge = {
+    -- Explicit developer-owned RemoteEvent path only.
+    -- Disabled by default because the original project's generic FireServer
+    -- target could not be identified from static analysis.
+    Enabled = false,
+
+    Path = {
+        "ReplicatedStorage",
+        "NewzRemotes",
+        "Action",
+    },
+
+    DefaultAction = "Ping",
 }
 
 Config.AimAssist = {

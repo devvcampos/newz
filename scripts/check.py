@@ -28,6 +28,10 @@ REQUIRED = [
     ROOT / "src" / "Features" / "CharacterFeatures.lua",
     ROOT / "src" / "Features" / "FeatureInput.lua",
 
+    ROOT / "src" / "Integrations" / "SensoryESP.lua",
+    ROOT / "src" / "Integrations" / "RemoteBridge.lua",
+    ROOT / "server" / "NewzRemotes.server.lua",
+
     ROOT / "vendor" / "NeverLose.lua",
     ROOT / "scripts" / "build.py",
 
@@ -124,6 +128,19 @@ FEATURE_EXPECTATIONS = {
         "ToggleNoclip",
         "ToggleInvisible",
     ],
+
+    "src/Integrations/SensoryESP.lua": [
+        "game:HttpGet",
+        "sensoryESP",
+        "loadstring",
+        "UpdateConfig",
+    ],
+
+    "src/Integrations/RemoteBridge.lua": [
+        "RemoteEvent",
+        "FireServer",
+        "FireTest",
+    ],
 }
 
 
@@ -211,6 +228,8 @@ def main() -> int:
             "AimAssistModule",
             "CharacterFeaturesModule",
             "FeatureInputModule",
+            "SensoryESPModule",
+            "RemoteBridgeModule",
         ]:
             if token not in main_text:
                 print(
@@ -232,6 +251,8 @@ def main() -> int:
             '"AimAssist"',
             '"CharacterFeatures"',
             '"FeatureInput"',
+            '"SensoryESP"',
+            '"RemoteBridge"',
         ]:
             if token not in build_text:
                 print(
@@ -254,8 +275,9 @@ def main() -> int:
 
         for token in [
             "Enum.CameraType.Scriptable",
-            "BindActionAtPriority",
-            "TeleportOnExit",
+            "RenderStepped",
+            "GetMouseDelta",
+            "Enum.MouseBehavior.Default",
             "SetKeybind",
         ]:
             if token not in freecam_text:

@@ -2,9 +2,9 @@
 
 Ferramenta visual/modular em Luau para desenvolvimento e diagnóstico em ambiente Roblox controlado.
 
-## Versão 0.6.0
+## Versão 0.6.1
 
-A 0.6.0 mantém a interface NeverLose já usada pelo projeto e incorpora, na arquitetura do Newz, o conjunto de recursos que conseguimos reconstruir com alta confiança do projeto analisado.
+A 0.6.1 mantém a interface NeverLose já usada pelo projeto e incorpora, na arquitetura do Newz, o conjunto de recursos que conseguimos reconstruir com alta confiança do projeto analisado.
 
 ### Recursos existentes preservados
 
@@ -88,12 +88,19 @@ newz/
 │  │  ├─ Freecam.lua
 │  │  └─ ESP.lua
 │  │
-│  └─ Features/
-│     ├─ AdvancedESP.lua
-│     ├─ PlayerTools.lua
-│     ├─ AimAssist.lua
-│     ├─ CharacterFeatures.lua
-│     └─ FeatureInput.lua
+│  ├─ Features/
+│  │  ├─ AdvancedESP.lua
+│  │  ├─ PlayerTools.lua
+│  │  ├─ AimAssist.lua
+│  │  ├─ CharacterFeatures.lua
+│  │  └─ FeatureInput.lua
+│  │
+│  └─ Integrations/
+│     ├─ SensoryESP.lua
+│     └─ RemoteBridge.lua
+│
+├─ server/
+│  └─ NewzRemotes.server.lua
 │
 ├─ vendor/
 │  └─ NeverLose.lua
@@ -137,7 +144,7 @@ Players
 
 Movement
 ├─ Freecam
-├─ Exit Behavior
+├─ Recovered Behavior
 ├─ Aim Assist
 ├─ Aim Filters
 └─ Character
@@ -149,12 +156,13 @@ Corpses
 Settings
 ├─ Interface
 ├─ Diagnostics
+├─ Integrations
 └─ Project
 ```
 
 ## Freecam
 
-A Freecam mantém o personagem real parado enquanto a câmera está livre. O reposicionamento opcional ao sair é uma tentativa cliente comum e pode ser corrigido pelo servidor da experiência.
+A Freecam 0.6.1 usa a estrutura recuperada do outro projeto: câmera `Scriptable`, atualização em `RenderStepped`, leitura de mouse por `GetMouseDelta()` e input de teclado. O personagem real não é teleportado nem reposicionado ao sair.
 
 Controles padrão:
 
@@ -181,12 +189,16 @@ Se tudo passar:
 ```powershell
 git status
 git add .
-git commit -m "Add reconstructed feature suite"
+git commit -m "Add sensoryESP integration and recovered freecam"
 git push origin main
 ```
+
+## Integrações 0.6.1
+
+- Stellar remote loader: **não incluído**; a NeverLose continua sendo a UI do Newz.
+- sensoryESP remote loader: incluído em `src/Integrations/SensoryESP.lua`, opcional e desativado por padrão.
+- FireServer: incluído em `src/Integrations/RemoteBridge.lua` somente para um `RemoteEvent` explicitamente configurado em `Config.RemoteBridge.Path`. `server/NewzRemotes.server.lua` fornece um companion opcional para o caminho padrão. O remote desconhecido do projeto analisado não foi adivinhado.
 
 ## Nota sobre a reconstrução
 
 As features foram implementadas no padrão arquitetural do Newz a partir dos comportamentos que conseguimos recuperar do projeto analisado. Isso não significa que nomes de variáveis, divisão original de arquivos ou implementação interna sejam idênticos ao código-fonte pré-ofuscação.
-
-Também não foi copiado o loader remoto do projeto analisado. As funcionalidades foram implementadas localmente dentro do Newz, mantendo o bundle autocontido.
