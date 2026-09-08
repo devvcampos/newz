@@ -155,8 +155,8 @@ Config.Freecam = {
 Config.ExternalESP = {
     -- Optional remote sensoryESP loader recovered from the other project.
     -- NeverLose remains the Newz UI. Stellar is intentionally not loaded.
-    Enabled = false,
-    AutoLoad = false,
+    Enabled = true,
+    AutoLoad = true,
 
     URL =
         "https://raw.githubusercontent.com/rthusrtghdfhtyjkehrfh/sensoryESP/main/ESP.lua",
@@ -166,7 +166,7 @@ Config.RemoteBridge = {
     -- Explicit developer-owned RemoteEvent path only.
     -- Disabled by default because the original project's generic FireServer
     -- target could not be identified from static analysis.
-    Enabled = false,
+    Enabled = true,
 
     Path = {
         "ReplicatedStorage",
