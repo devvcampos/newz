@@ -575,86 +575,51 @@ function AdvancedESP.Init(Config)
         return false
     end
 
-    local function GetBounds(
-        Character,
-        Camera
-    )
-        local Success,
-            Pivot,
-            Size =
-                pcall(
-                    Character.GetBoundingBox,
-                    Character
-                )
+    -- Tabela de nomes de partes do corpo (mesma do Core/Bounds.lua)
+    local BodyPartNames = {
+        ["Head"] = true, ["Head2"] = true, ["Torso"] = true,
+        ["Left Arm"] = true, ["Right Arm"] = true,
+        ["Left Leg"] = true, ["Right Leg"] = true,
+        ["UpperTorso"] = true, ["LowerTorso"] = true,
+        ["LeftUpperArm"] = true, ["LeftLowerArm"] = true, ["LeftHand"] = true,
+        ["RightUpperArm"] = true, ["RightLowerArm"] = true, ["RightHand"] = true,
+        ["LeftUpperLeg"] = true, ["LeftLowerLeg"] = true, ["LeftFoot"] = true,
+        ["RightUpperLeg"] = true, ["RightLowerLeg"] = true, ["RightFoot"] = true,
+    }
 
-        if not Success then
-            return nil
-        end
+    local function GetBounds(Character, Camera)
+        local MinX, MinY = math.huge, math.huge
+        local MaxX, MaxY = -math.huge, -math.huge
+        local SawPoint = false
 
-        local Half =
-            Size * 0.5
+        -- Itera APENAS pelas partes do corpo, ignorando ferramentas/acessórios
+        for _, Part in ipairs(Character:GetDescendants()) do
+            if Part:IsA("BasePart") and BodyPartNames[Part.Name] then
+                -- Ignora se estiver dentro de uma Tool ou Accessory
+                local isTool = Part:FindFirstAncestorWhichIsA("Tool")
+                local isAccessory = Part:FindFirstAncestorWhichIsA("Accessory")
+                
+                if not isTool and not isAccessory then
+                    local Size = Part.Size
+                    local CF = Part.CFrame
+                    local HalfSize = Size * 0.5
 
-        local MinX =
-            math.huge
-
-        local MinY =
-            math.huge
-
-        local MaxX =
-            -math.huge
-
-        local MaxY =
-            -math.huge
-
-        local SawPoint =
-            false
-
-        for X = -1, 1, 2 do
-            for Y = -1, 1, 2 do
-                for Z = -1, 1, 2 do
-                    local World =
-                        (
-                            Pivot
-                            * CFrame.new(
-                                Half.X * X,
-                                Half.Y * Y,
-                                Half.Z * Z
-                            )
-                        ).Position
-
-                    local Point =
-                        Camera:
-                            WorldToViewportPoint(
-                                World
-                            )
-
-                    if Point.Z > 0 then
-                        SawPoint =
-                            true
-
-                        MinX =
-                            math.min(
-                                MinX,
-                                Point.X
-                            )
-
-                        MinY =
-                            math.min(
-                                MinY,
-                                Point.Y
-                            )
-
-                        MaxX =
-                            math.max(
-                                MaxX,
-                                Point.X
-                            )
-
-                        MaxY =
-                            math.max(
-                                MaxY,
-                                Point.Y
-                            )
+                    -- Projeta os 8 cantos da parte para a tela
+                    for X = -1, 1, 2 do
+                        for Y = -1, 1, 2 do
+                            for Z = -1, 1, 2 do
+                                local WorldPos = (CF * CFrame.new(HalfSize.X * X, HalfSize.Y * Y, HalfSize.Z * Z)).Position
+                                local ScreenPos, OnScreen = Camera:WorldToViewportPoint(WorldPos)
+                                
+                                if OnScreen and ScreenPos.Z > 0 then
+                                    SawPoint = true
+                                    MinX = math.min(MinX, ScreenPos.X)
+                                    MinY = math.min(MinY, ScreenPos.Y)
+                                    MaxX = math.max(MaxX, ScreenPos.X)
+                                    MaxY = math.max(MaxY, ScreenPos.Y)
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -665,33 +630,12 @@ function AdvancedESP.Init(Config)
         end
 
         return {
-            X =
-                MinX,
-
-            Y =
-                MinY,
-
-            Width =
-                math.max(
-                    1,
-                    MaxX - MinX
-                ),
-
-            Height =
-                math.max(
-                    1,
-                    MaxY - MinY
-                ),
-
-            CenterX =
-                (
-                    MinX + MaxX
-                ) * 0.5,
-
-            CenterY =
-                (
-                    MinY + MaxY
-                ) * 0.5,
+            X = MinX,
+            Y = MinY,
+            Width = math.max(1, MaxX - MinX),
+            Height = math.max(1, MaxY - MinY),
+            CenterX = (MinX + MaxX) * 0.5,
+            CenterY = (MinY + MaxY) * 0.5,
         }
     end
 
