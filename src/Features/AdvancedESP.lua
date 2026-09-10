@@ -39,14 +39,20 @@ function AdvancedESP.Init(Config)
     local UpdateInterval =
         1 / UpdateFrequency
 
-    local ParentGui =
-        LocalPlayer:WaitForChild("PlayerGui")
+    local CoreGui =
+        (gethui and gethui())
+        or game:GetService("CoreGui")
+
+    local GuiName =
+        "NEWZ_AdvancedESP_"
+        .. tostring(
+            math.random(100000, 999999)
+        )
 
     local OldGui =
-        ParentGui:
-            FindFirstChild(
-                "NEWZ_AdvancedESP"
-            )
+        CoreGui:FindFirstChild(
+            "NEWZ_AdvancedESP"
+        )
 
     if OldGui then
         OldGui:Destroy()
@@ -58,7 +64,7 @@ function AdvancedESP.Init(Config)
         )
 
     ScreenGui.Name =
-        "NEWZ_AdvancedESP"
+        GuiName
 
     ScreenGui.ResetOnSpawn =
         false
@@ -73,7 +79,7 @@ function AdvancedESP.Init(Config)
         Enum.ZIndexBehavior.Sibling
 
     ScreenGui.Parent =
-        ParentGui
+        CoreGui
 
     local Destroyed = false
     local Accumulator = 0
@@ -360,6 +366,9 @@ function AdvancedESP.Init(Config)
 
             SkeletonLines =
                 {},
+
+            Visible =
+                true,
         }
     end
 
@@ -497,13 +506,15 @@ function AdvancedESP.Init(Config)
             == LocalPlayer.Team
     end
 
+    -- Verifica visibilidade de múltiplos pontos. Se QUALQUER parte
+    -- estiver desobstruída, considera visível.
     local function IsVisible(
         Character,
-        TargetPart,
+        Head,
         Camera
     )
         if
-            not TargetPart
+            not Character
             or not Camera
         then
             return false
@@ -527,26 +538,41 @@ function AdvancedESP.Init(Config)
         local Origin =
             Camera.CFrame.Position
 
-        local Direction =
-            TargetPart.Position
-            - Origin
+        local CheckParts = {
+            Head,
+            Character:FindFirstChild("UpperTorso"),
+            Character:FindFirstChild("HumanoidRootPart"),
+        }
 
-        local Result =
-            Workspace:Raycast(
-                Origin,
-                Direction,
-                VisibilityParams
-            )
-
-        return
-            not Result
-            or (
-                Result.Instance
-                and Result.Instance:
-                    IsDescendantOf(
-                        Character
+        for _, Part in ipairs(CheckParts) do
+            if
+                Part
+                and Part:IsA("BasePart")
+            then
+                local Result =
+                    Workspace:Raycast(
+                        Origin,
+                        Part.Position
+                            - Origin,
+                        VisibilityParams
                     )
-            )
+
+                if
+                    not Result
+                    or (
+                        Result.Instance
+                        and Result.Instance:
+                            IsDescendantOf(
+                                Character
+                            )
+                    )
+                then
+                    return true
+                end
+            end
+        end
+
+        return false
     end
 
     local function GetBounds(
@@ -756,10 +782,12 @@ function AdvancedESP.Init(Config)
         return Line
     end
 
+    -- Skeleton também respeita visibilidade agora.
     local function UpdateSkeleton(
         Data,
         Character,
-        Camera
+        Camera,
+        Visible
     )
         local Skeleton =
             Settings.Skeleton
@@ -783,6 +811,20 @@ function AdvancedESP.Init(Config)
                 1,
                 1
             )
+
+        if
+            Settings.VisibilityCheck
+            == true
+            and not Visible
+        then
+            Color =
+                Settings.HiddenColor
+                or Color3.fromRGB(
+                    255,
+                    90,
+                    90
+                )
+        end
 
         local Thickness =
             tonumber(
@@ -917,10 +959,12 @@ function AdvancedESP.Init(Config)
             )
     end
 
+    -- HealthBar agora respeita visibilidade.
     local function UpdateHealthBar(
         Data,
         Bounds,
-        Humanoid
+        Humanoid,
+        Visible
     )
         local HealthSettings =
             Settings.HealthBar
@@ -1022,10 +1066,29 @@ function AdvancedESP.Init(Config)
                 0
             )
 
+        -- Cor dinâmica com base em HP OU visibilidade
+        local BarColor
+        if
+            Settings.VisibilityCheck
+            == true
+            and not Visible
+        then
+            BarColor =
+                Settings.HiddenColor
+                or Color3.fromRGB(
+                    255,
+                    90,
+                    90
+                )
+        else
+            BarColor =
+                GetHealthColor(
+                    Humanoid
+                )
+        end
+
         Data.HealthFill.BackgroundColor3 =
-            GetHealthColor(
-                Humanoid
-            )
+            BarColor
 
         Data.HealthFill.Visible =
             true
@@ -1139,11 +1202,13 @@ function AdvancedESP.Init(Config)
             true
     end
 
+    -- Texto avançado respeita visibilidade.
     local function UpdateAdvancedText(
         Data,
         Bounds,
         Player,
-        Distance
+        Distance,
+        Visible
     )
         local TextSettings =
             Settings.AdvancedText
@@ -1204,6 +1269,20 @@ function AdvancedESP.Init(Config)
                 1,
                 1
             )
+
+        if
+            Settings.VisibilityCheck
+            == true
+            and not Visible
+        then
+            TextColor =
+                Settings.HiddenColor
+                or Color3.fromRGB(
+                    255,
+                    90,
+                    90
+                )
+        end
 
         Data.NameText.TextColor3 =
             TextColor
@@ -1305,9 +1384,11 @@ function AdvancedESP.Init(Config)
         end
     end
 
+    -- Outline respeita visibilidade.
     local function UpdateOutline(
         Data,
-        Bounds
+        Bounds,
+        Visible
     )
         if
             Settings.Outlines
@@ -1331,13 +1412,35 @@ function AdvancedESP.Init(Config)
                 Bounds.Height
             )
 
+        local UseVisibility =
+            Settings.VisibilityCheck
+            == true
+
+        local Color
+
+        if
+            UseVisibility
+            and not Visible
+        then
+            Color =
+                Settings.HiddenColor
+                or Color3.fromRGB(
+                    255,
+                    90,
+                    90
+                )
+        else
+            Color =
+                Settings.OutlineColor
+                or Color3.new(
+                    0,
+                    0,
+                    0
+                )
+        end
+
         Data.OutlineStroke.Color =
-            Settings.OutlineColor
-            or Color3.new(
-                0,
-                0,
-                0
-            )
+            Color
 
         Data.OutlineStroke.Thickness =
             math.max(
@@ -1753,12 +1856,17 @@ function AdvancedESP.Init(Config)
                 )
         end
 
+        Data.Visible =
+            Visible
+
+        -- Chams usa Visible
         UpdateChams(
             Data,
             Character,
             Visible
         )
 
+        -- Fora da tela: esconde 2D e mostra seta
         if
             not RootOnScreen
             or RootScreen.Z
@@ -1815,15 +1923,18 @@ function AdvancedESP.Init(Config)
             return
         end
 
+        -- Passa Visible para tudo
         UpdateOutline(
             Data,
-            Bounds
+            Bounds,
+            Visible
         )
 
         UpdateHealthBar(
             Data,
             Bounds,
-            Humanoid
+            Humanoid,
+            Visible
         )
 
         UpdateFlags(
@@ -1836,13 +1947,15 @@ function AdvancedESP.Init(Config)
             Data,
             Bounds,
             Player,
-            Distance
+            Distance,
+            Visible
         )
 
         UpdateSkeleton(
             Data,
             Character,
-            Camera
+            Camera,
+            Visible
         )
     end
 
