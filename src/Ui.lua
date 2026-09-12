@@ -1739,6 +1739,142 @@ function UI.Init(
                             Value
                     end
                 )
+                
+                -----------------------------------------------------
+                -- LOOT ESP
+                -----------------------------------------------------
+
+                local LootTab =
+                    Window:AddTab({
+                        Icon = "gift-box",
+                        Name = "Loot",
+                        Type = "Double",
+                    })
+
+                local LootSection =
+                    LootTab:AddSection({
+                        Name = "Loot ESP",
+                        Position = "left",
+                    })
+
+                AddToggle(
+                    LootSection,
+                    "Enabled",
+                    "loot_enabled",
+                    Config.Loot.Enabled,
+                    function(Value)
+                        Config.Loot.Enabled = Value
+                    end
+                )
+
+                AddToggle(
+                    LootSection,
+                    "Box",
+                    "loot_box",
+                    Config.Loot.Box,
+                    function(Value)
+                        Config.Loot.Box = Value
+                    end
+                )
+
+                AddToggle(
+                    LootSection,
+                    "Name",
+                    "loot_name",
+                    Config.Loot.Name,
+                    function(Value)
+                        Config.Loot.Name = Value
+                    end
+                )
+
+                AddToggle(
+                    LootSection,
+                    "Distance",
+                    "loot_distance",
+                    Config.Loot.Distance,
+                    function(Value)
+                        Config.Loot.Distance = Value
+                    end
+                )
+
+                AddSlider(
+                    LootSection,
+                    "Max Items",
+                    "loot_max_items",
+                    Config.Loot.MaxItems,
+                    1,
+                    200,
+                    0,
+                    function(Value)
+                        Config.Loot.MaxItems = Value
+                    end
+                )
+
+                AddSlider(
+                    LootSection,
+                    "Max Distance",
+                    "loot_max_distance",
+                    Config.Loot.MaxDistance,
+                    50,
+                    3000,
+                    0,
+                    function(Value)
+                        Config.Loot.MaxDistance = Value
+                    end
+                )
+
+                local LootAppearanceSection =
+                    LootTab:AddSection({
+                        Name = "Appearance",
+                        Position = "right",
+                    })
+
+                AddDropdown(
+                    LootAppearanceSection,
+                    "Box Style",
+                    "loot_box_style",
+                    Config.Loot.BoxStyle,
+                    { "Corner", "Full" },
+                    function(Value)
+                        Config.Loot.BoxStyle = Value
+                    end
+                )
+
+                AddColorPicker(
+                    LootAppearanceSection,
+                    "Text Color",
+                    "loot_text_color",
+                    Config.Loot.TextColor,
+                    function(Value)
+                        Config.Loot.TextColor = Value
+                    end
+                )
+
+                AddSlider(
+                    LootAppearanceSection,
+                    "Box Thickness",
+                    "loot_box_thickness",
+                    Config.Loot.BoxThickness,
+                    1,
+                    4,
+                    0,
+                    function(Value)
+                        Config.Loot.BoxThickness = Value
+                    end
+                )
+
+                AddSlider(
+                    LootAppearanceSection,
+                    "Box Padding",
+                    "loot_box_padding",
+                    Config.Loot.BoxPadding,
+                    0,
+                    10,
+                    0,
+                    function(Value)
+                        Config.Loot.BoxPadding = Value
+                    end
+                )
 
                 -----------------------------------------------------
                 -- MOVEMENT / FREECAM + CHARACTER FEATURES
@@ -2151,6 +2287,44 @@ function UI.Init(
                             false
                     end
                 )
+
+                local LootCategoriesSection =
+                    LootTab:AddSection({
+                        Name = "Categories",
+                        Position = "right",
+                    })
+
+                for _, CategoryName in ipairs({
+                    "Military",
+                    "Food",
+                    "Industrial",
+                    "Residential",
+                    "Medical",
+                    "Weapons",
+                    "Police",
+                    "Vehicle",
+                    "Trash",
+                }) do
+                    AddToggle(
+                        LootCategoriesSection,
+                        CategoryName,
+                        "loot_cat_" .. CategoryName,
+                        Config.Loot.Categories[CategoryName] == true,
+                        function(Value)
+                            Config.Loot.Categories[CategoryName] = Value
+                        end
+                    )
+
+                    AddColorPicker(
+                        LootCategoriesSection,
+                        CategoryName .. " Color",
+                        "loot_color_" .. CategoryName,
+                        Config.Loot.Colors[CategoryName],
+                        function(Value)
+                            Config.Loot.Colors[CategoryName] = Value
+                        end
+                    )
+                end
 
                 -----------------------------------------------------
                 -- SETTINGS

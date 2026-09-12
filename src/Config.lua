@@ -138,6 +138,84 @@ Config.Corpses = {
     MaxDistance = 500,
 }
 
+Config.Loot = {
+    Enabled = false,
+
+    Box = true,
+    Name = true,
+    Distance = true,
+
+    -- Nº máximo de itens desenhados ao mesmo tempo (seleciona por distância)
+    MaxItems = 40,
+    SelectionInterval = 0.5,
+
+    BoxStyle = "Corner",
+    TextColor = Color3.fromRGB(255, 255, 255),
+
+    BoxThickness = 1,
+    BoxPadding = 2,
+    CornerRatio = 0.25,
+
+    MaxDistance = 500,
+
+    -- Cores por categoria
+    Colors = {
+        Military = Color3.fromRGB(255, 165, 60),
+        Food = Color3.fromRGB(120, 220, 120),
+        Industrial = Color3.fromRGB(180, 180, 180),
+        Residential = Color3.fromRGB(200, 150, 100),
+        Medical = Color3.fromRGB(80, 220, 140),
+        Weapons = Color3.fromRGB(255, 80, 80),
+        Police = Color3.fromRGB(80, 140, 255),
+        Vehicle = Color3.fromRGB(255, 200, 80),
+        Trash = Color3.fromRGB(120, 120, 120),
+    },
+
+    -- Categorias ativas
+    Categories = {
+        Military = true,
+        Food = false,
+        Industrial = true,
+        Residential = false,
+        Medical = false,
+        Weapons = true,
+        Police = false,
+        Vehicle = false,
+        Trash = false,
+    },
+
+    -- Nomes por categoria (adapte ao seu jogo alvo)
+    Names = {
+        Military = {
+            "MilitaryCrate", "MilitaryLocker", "MilitarySleepingBag",
+        },
+        Food = {
+            "Fridge", "VendingMachine", "KitchenCabinet", "Boxed Food",
+        },
+        Industrial = {
+            "ToolChest", "WarehouseShelf", "SupplyBoxes", "FileCabinet",
+        },
+        Residential = {
+            "Closet", "Drawer", "Desk", "Bed", "Bag", "Suitcase", "CardboardBoxes",
+        },
+        Medical = {
+            "MedicalCabinet", "MedicalBox", "Ambulance",
+        },
+        Weapons = {
+            "WeaponCase", "AmmoBox", "AmmoCrate", "GunSupplies", "GunCabinet",
+        },
+        Police = {
+            "PoliceLocker", "PoliceCar",
+        },
+        Vehicle = {
+            "CarWreck", "FireTruck", "FireFighterLocker",
+        },
+        Trash = {
+            "Dumpster", "TrashBin",
+        },
+    },
+}
+
 Config.Freecam = {
     Enabled = false,
 

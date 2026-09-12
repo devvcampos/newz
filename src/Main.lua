@@ -67,6 +67,9 @@ local FreecamModule =
 local ESPModule =
     Bundled.ESPModule
 
+local LootESPModule =
+    Bundled.LootESPModule
+
 local AdvancedESPModule =
     Bundled.AdvancedESPModule
 
@@ -135,6 +138,12 @@ assert(
     and type(PlayerESPModule.Init)
         == "function",
     "PlayerESP.lua invalido"
+)
+
+assert(
+    type(LootESPModule) == "table"
+    and type(LootESPModule.Init) == "function",
+    "LootESP.lua invalido"
 )
 
 assert(
@@ -279,6 +288,9 @@ local InitSuccess,
 
                         CorpseESPModule =
                             CorpseESPModule,
+
+                        LootESPModule = 
+                            LootESPModule,
                     }
                 )
 
