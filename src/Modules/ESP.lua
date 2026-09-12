@@ -42,13 +42,12 @@ function ESP.Init(Config, Dependencies)
         "ESP precisa de dependencias"
     )
 
-    local Profiler = Dependencies.Profiler    
+    local Profiler = Dependencies.Profiler
     local BoundsModule = Dependencies.BoundsModule
     local VisualsModule = Dependencies.VisualsModule
     local SchedulerModule = Dependencies.SchedulerModule
     local PlayerESPModule = Dependencies.PlayerESPModule
     local CorpseESPModule = Dependencies.CorpseESPModule
-    local LootESPModule = Dependencies.LootESPModule
 
     assert(
         BoundsModule
@@ -78,12 +77,6 @@ function ESP.Init(Config, Dependencies)
         CorpseESPModule
         and type(CorpseESPModule.Init) == "function",
         "CorpseESPModule invalido"
-    )
-
-    assert(
-        LootESPModule
-        and type(LootESPModule.Init) == "function",
-        "LootESPModule invalido"
     )
 
 
@@ -190,22 +183,6 @@ function ESP.Init(Config, Dependencies)
                 "CorpseESP.Init nao retornou controller"
             )
 
-            LootController =
-                LootESPModule.Init(
-                    Config,
-                    {
-                        Bounds = Bounds,
-                        Visuals = Visuals,
-                        SchedulerModule = SchedulerModule,
-                        Profiler = Profiler,
-                    }
-                )
-
-            assert(
-                type(LootController) == "table",
-                "LootESP.Init nao retornou controller"
-            )
-
             local PlayerStep =
                 PlayerController.Step
 
@@ -246,13 +223,9 @@ function ESP.Init(Config, Dependencies)
                     local CorpsesEnabled =
                         Config.Corpses.Enabled == true
 
-                    local LootEnabled =
-                        Config.Loot and Config.Loot.Enabled == true
-
                     if
                         not PlayersEnabled
                         and not CorpsesEnabled
-                        and not LootEnabled
                     then
                         PlayerStep(
                             DeltaTime,
@@ -263,8 +236,6 @@ function ESP.Init(Config, Dependencies)
                             DeltaTime,
                             nil
                         )
-
-                        LootController.Step(DeltaTime, Camera)
 
                         ProfileFinish(
                             "Newz.Render",
@@ -328,7 +299,6 @@ function ESP.Init(Config, Dependencies)
         CleanupController(CorpseController)
         CleanupController(PlayerController)
         CleanupController(Visuals)
-        CleanupController(LootController)
 
         if ScreenGui then
             pcall(

@@ -138,84 +138,6 @@ Config.Corpses = {
     MaxDistance = 500,
 }
 
-Config.Loot = {
-    Enabled = false,
-
-    Box = true,
-    Name = true,
-    Distance = true,
-
-    -- Nº máximo de itens desenhados ao mesmo tempo (seleciona por distância)
-    MaxItems = 40,
-    SelectionInterval = 0.5,
-
-    BoxStyle = "Corner",
-    TextColor = Color3.fromRGB(255, 255, 255),
-
-    BoxThickness = 1,
-    BoxPadding = 2,
-    CornerRatio = 0.25,
-
-    MaxDistance = 500,
-
-    -- Cores por categoria
-    Colors = {
-        Military = Color3.fromRGB(255, 165, 60),
-        Food = Color3.fromRGB(120, 220, 120),
-        Industrial = Color3.fromRGB(180, 180, 180),
-        Residential = Color3.fromRGB(200, 150, 100),
-        Medical = Color3.fromRGB(80, 220, 140),
-        Weapons = Color3.fromRGB(255, 80, 80),
-        Police = Color3.fromRGB(80, 140, 255),
-        Vehicle = Color3.fromRGB(255, 200, 80),
-        Trash = Color3.fromRGB(120, 120, 120),
-    },
-
-    -- Categorias ativas
-    Categories = {
-        Military = true,
-        Food = false,
-        Industrial = true,
-        Residential = false,
-        Medical = false,
-        Weapons = true,
-        Police = false,
-        Vehicle = false,
-        Trash = false,
-    },
-
-    -- Nomes por categoria (adapte ao seu jogo alvo)
-    Names = {
-        Military = {
-            "MilitaryCrate", "MilitaryLocker", "MilitarySleepingBag",
-        },
-        Food = {
-            "Fridge", "VendingMachine", "KitchenCabinet", "Boxed Food",
-        },
-        Industrial = {
-            "ToolChest", "WarehouseShelf", "SupplyBoxes", "FileCabinet",
-        },
-        Residential = {
-            "Closet", "Drawer", "Desk", "Bed", "Bag", "Suitcase", "CardboardBoxes",
-        },
-        Medical = {
-            "MedicalCabinet", "MedicalBox", "Ambulance",
-        },
-        Weapons = {
-            "WeaponCase", "AmmoBox", "AmmoCrate", "GunSupplies", "GunCabinet",
-        },
-        Police = {
-            "PoliceLocker", "PoliceCar",
-        },
-        Vehicle = {
-            "CarWreck", "FireTruck", "FireFighterLocker",
-        },
-        Trash = {
-            "Dumpster", "TrashBin",
-        },
-    },
-}
-
 Config.Freecam = {
     Enabled = false,
 
@@ -225,34 +147,13 @@ Config.Freecam = {
     BoostMultiplier = 3,
     MouseSensitivity = 0.12,
 
-    -- Recovered-style freecam: Scriptable camera only.
-    -- The real character is not repositioned on exit.
-    Style = "Recovered",
-}
+    -- Freecam keeps the real character in place while active.
+    -- On normal exit this performs one ordinary client-side reposition attempt.
+    TeleportOnExit = true,
 
-Config.ExternalESP = {
-    -- Optional remote sensoryESP loader recovered from the other project.
-    -- NeverLose remains the Newz UI. Stellar is intentionally not loaded.
-    Enabled = true,
-    AutoLoad = true,
-
-    URL =
-        "https://raw.githubusercontent.com/rthusrtghdfhtyjkehrfh/sensoryESP/main/ESP.lua",
-}
-
-Config.RemoteBridge = {
-    -- Explicit developer-owned RemoteEvent path only.
-    -- Disabled by default because the original project's generic FireServer
-    -- target could not be identified from static analysis.
-    Enabled = true,
-
-    Path = {
-        "ReplicatedStorage",
-        "NewzRemotes",
-        "Action",
-    },
-
-    DefaultAction = "Ping",
+    SnapToGround = true,
+    GroundProbeDistance = 200,
+    GroundOffset = 3,
 }
 
 Config.AimAssist = {
@@ -290,6 +191,18 @@ Config.Noclip = {
 Config.Invisible = {
     Enabled = false,
     Keybind = "I",
+}
+
+Config.RemoteDependencies = {
+    Enabled = true,
+
+    -- Optional compatibility loaders recovered from the friend's project.
+    -- They are NOT loaded automatically. Use the Settings tab buttons.
+    StellarUrl =
+        "https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Stellar/Library.lua",
+
+    SensoryESPUrl =
+        "https://raw.githubusercontent.com/rthusrtghdfhtyjkehrfh/sensoryESP/main/ESP.lua",
 }
 
 Config.PlayerTools = {

@@ -56,11 +56,8 @@ function UI.Init(
     local AdvancedESP =
         Dependencies.AdvancedESP
 
-    local SensoryESP =
-        Dependencies.SensoryESP
-
-    local RemoteBridge =
-        Dependencies.RemoteBridge
+    local RemoteDependencies =
+        Dependencies.RemoteDependencies
 
     assert(
         type(NeverLose.CreateWindow)
@@ -105,26 +102,19 @@ function UI.Init(
     )
 
     assert(
+        type(RemoteDependencies) == "table"
+        and type(RemoteDependencies.LoadStellar)
+            == "function"
+        and type(RemoteDependencies.LoadSensoryESP)
+            == "function",
+        "RemoteDependencies invalido"
+    )
+
+    assert(
         type(AdvancedESP) == "table"
         and type(AdvancedESP.Refresh)
             == "function",
         "AdvancedESP invalido"
-    )
-
-    assert(
-        type(SensoryESP) == "table"
-        and type(SensoryESP.SetEnabled)
-            == "function"
-        and type(SensoryESP.Load)
-            == "function",
-        "SensoryESP invalido"
-    )
-
-    assert(
-        type(RemoteBridge) == "table"
-        and type(RemoteBridge.FireTest)
-            == "function",
-        "RemoteBridge invalido"
     )
 
     local Destroyed = false
@@ -152,10 +142,6 @@ function UI.Init(
         )
 
         CharacterFeatures.SetStateChangedCallback(
-            nil
-        )
-
-        SensoryESP.SetStateChangedCallback(
             nil
         )
 
@@ -1739,142 +1725,6 @@ function UI.Init(
                             Value
                     end
                 )
-                
-                -----------------------------------------------------
-                -- LOOT ESP
-                -----------------------------------------------------
-
-                local LootTab =
-                    Window:AddTab({
-                        Icon = "gift-box",
-                        Name = "Loot",
-                        Type = "Double",
-                    })
-
-                local LootSection =
-                    LootTab:AddSection({
-                        Name = "Loot ESP",
-                        Position = "left",
-                    })
-
-                AddToggle(
-                    LootSection,
-                    "Enabled",
-                    "loot_enabled",
-                    Config.Loot.Enabled,
-                    function(Value)
-                        Config.Loot.Enabled = Value
-                    end
-                )
-
-                AddToggle(
-                    LootSection,
-                    "Box",
-                    "loot_box",
-                    Config.Loot.Box,
-                    function(Value)
-                        Config.Loot.Box = Value
-                    end
-                )
-
-                AddToggle(
-                    LootSection,
-                    "Name",
-                    "loot_name",
-                    Config.Loot.Name,
-                    function(Value)
-                        Config.Loot.Name = Value
-                    end
-                )
-
-                AddToggle(
-                    LootSection,
-                    "Distance",
-                    "loot_distance",
-                    Config.Loot.Distance,
-                    function(Value)
-                        Config.Loot.Distance = Value
-                    end
-                )
-
-                AddSlider(
-                    LootSection,
-                    "Max Items",
-                    "loot_max_items",
-                    Config.Loot.MaxItems,
-                    1,
-                    200,
-                    0,
-                    function(Value)
-                        Config.Loot.MaxItems = Value
-                    end
-                )
-
-                AddSlider(
-                    LootSection,
-                    "Max Distance",
-                    "loot_max_distance",
-                    Config.Loot.MaxDistance,
-                    50,
-                    3000,
-                    0,
-                    function(Value)
-                        Config.Loot.MaxDistance = Value
-                    end
-                )
-
-                local LootAppearanceSection =
-                    LootTab:AddSection({
-                        Name = "Appearance",
-                        Position = "right",
-                    })
-
-                AddDropdown(
-                    LootAppearanceSection,
-                    "Box Style",
-                    "loot_box_style",
-                    Config.Loot.BoxStyle,
-                    { "Corner", "Full" },
-                    function(Value)
-                        Config.Loot.BoxStyle = Value
-                    end
-                )
-
-                AddColorPicker(
-                    LootAppearanceSection,
-                    "Text Color",
-                    "loot_text_color",
-                    Config.Loot.TextColor,
-                    function(Value)
-                        Config.Loot.TextColor = Value
-                    end
-                )
-
-                AddSlider(
-                    LootAppearanceSection,
-                    "Box Thickness",
-                    "loot_box_thickness",
-                    Config.Loot.BoxThickness,
-                    1,
-                    4,
-                    0,
-                    function(Value)
-                        Config.Loot.BoxThickness = Value
-                    end
-                )
-
-                AddSlider(
-                    LootAppearanceSection,
-                    "Box Padding",
-                    "loot_box_padding",
-                    Config.Loot.BoxPadding,
-                    0,
-                    10,
-                    0,
-                    function(Value)
-                        Config.Loot.BoxPadding = Value
-                    end
-                )
 
                 -----------------------------------------------------
                 -- MOVEMENT / FREECAM + CHARACTER FEATURES
@@ -2016,47 +1866,61 @@ function UI.Init(
                     end
                 )
 
-                local FreecamBehaviorSection =
+                local FreecamExitSection =
                     MovementTab:
                         AddSection({
                             Name =
-                                "Recovered Behavior",
+                                "Exit Behavior",
 
                             Position =
                                 "right",
                         })
 
-                FreecamBehaviorSection:
-                    AddLabel(
-                        "Scriptable camera only",
-                        true
-                    )
+                AddToggle(
+                    FreecamExitSection,
+                    "Teleport On Exit",
+                    "freecam_teleport_exit",
+                    Config.Freecam.TeleportOnExit
+                        ~= false,
+                    function(Value)
+                        Freecam.SetTeleportOnExit(
+                            Value
+                        )
+                    end
+                )
 
-                FreecamBehaviorSection:
-                    AddLabel(
-                        "Character stays in place",
-                        true
-                    )
+                AddToggle(
+                    FreecamExitSection,
+                    "Snap To Ground",
+                    "freecam_snap_ground",
+                    Config.Freecam.SnapToGround
+                        ~= false,
+                    function(Value)
+                        Freecam.SetSnapToGround(
+                            Value
+                        )
+                    end
+                )
 
-                FreecamBehaviorSection:
+                FreecamExitSection:
                     AddLabel(
                         "WASD: move",
                         true
                     )
 
-                FreecamBehaviorSection:
+                FreecamExitSection:
                     AddLabel(
                         "Space / Ctrl: up / down",
                         true
                     )
 
-                FreecamBehaviorSection:
+                FreecamExitSection:
                     AddLabel(
                         "Shift: boost",
                         true
                     )
 
-                FreecamBehaviorSection:
+                FreecamExitSection:
                     AddLabel(
                         "Mouse: look",
                         true
@@ -2288,44 +2152,6 @@ function UI.Init(
                     end
                 )
 
-                local LootCategoriesSection =
-                    LootTab:AddSection({
-                        Name = "Categories",
-                        Position = "right",
-                    })
-
-                for _, CategoryName in ipairs({
-                    "Military",
-                    "Food",
-                    "Industrial",
-                    "Residential",
-                    "Medical",
-                    "Weapons",
-                    "Police",
-                    "Vehicle",
-                    "Trash",
-                }) do
-                    AddToggle(
-                        LootCategoriesSection,
-                        CategoryName,
-                        "loot_cat_" .. CategoryName,
-                        Config.Loot.Categories[CategoryName] == true,
-                        function(Value)
-                            Config.Loot.Categories[CategoryName] = Value
-                        end
-                    )
-
-                    AddColorPicker(
-                        LootCategoriesSection,
-                        CategoryName .. " Color",
-                        "loot_color_" .. CategoryName,
-                        Config.Loot.Colors[CategoryName],
-                        function(Value)
-                            Config.Loot.Colors[CategoryName] = Value
-                        end
-                    )
-                end
-
                 -----------------------------------------------------
                 -- SETTINGS
                 -----------------------------------------------------
@@ -2436,139 +2262,89 @@ function UI.Init(
                         true
                     )
 
-                local IntegrationsSection =
+                local RemoteSection =
                     SettingsTab:
                         AddSection({
                             Name =
-                                "Integrations",
+                                "Friend Dependencies",
 
                             Position =
                                 "right",
                         })
 
+                local StellarStatus =
+                    RemoteSection:
+                        AddLabel(
+                            "Stellar: "
+                            .. tostring(
+                                RemoteDependencies.GetStatus(
+                                    "Stellar"
+                                )
+                            ),
+                            true
+                        )
+
                 local SensoryStatus =
-                    IntegrationsSection:
+                    RemoteSection:
                         AddLabel(
-                            "sensoryESP: OFF",
+                            "sensoryESP: "
+                            .. tostring(
+                                RemoteDependencies.GetStatus(
+                                    "SensoryESP"
+                                )
+                            ),
                             true
                         )
 
-                AddToggle(
-                    IntegrationsSection,
-                    "Remote sensoryESP",
-                    "external_sensory_esp",
-                    Config.ExternalESP.Enabled == true,
-                    function(Value)
-                        local Ok, Message =
-                            SensoryESP.SetEnabled(
-                                Value
+                local function RefreshRemoteStatus()
+                    StellarStatus:SetText(
+                        "Stellar: "
+                        .. tostring(
+                            RemoteDependencies.GetStatus(
+                                "Stellar"
                             )
-
-                        if not Ok then
-                            SensoryStatus:
-                                SetText(
-                                    "sensoryESP: error - "
-                                    .. tostring(Message)
-                                )
-                        end
-                    end
-                )
-
-                SensoryESP.SetStateChangedCallback(
-                    function(Loaded, ErrorMessage)
-                        if Destroyed then
-                            return
-                        end
-
-                        if ErrorMessage then
-                            SensoryStatus:
-                                SetText(
-                                    "sensoryESP: error - "
-                                    .. tostring(ErrorMessage)
-                                )
-                        else
-                            SensoryStatus:
-                                SetText(
-                                    Loaded
-                                    and "sensoryESP: ON"
-                                    or "sensoryESP: OFF"
-                                )
-                        end
-                    end
-                )
-
-                IntegrationsSection:
-                    AddButton({
-                        Name =
-                            "Refresh sensoryESP",
-
-                        Callback =
-                            function()
-                                local Ok, Message =
-                                    SensoryESP.Refresh()
-
-                                SensoryStatus:
-                                    SetText(
-                                        Ok
-                                        and "sensoryESP: refreshed"
-                                        or "sensoryESP: " .. tostring(Message)
-                                    )
-                            end,
-                    })
-
-                local RemoteStatus =
-                    IntegrationsSection:
-                        AddLabel(
-                            "FireServer bridge: OFF",
-                            true
                         )
-
-                AddToggle(
-                    IntegrationsSection,
-                    "Configured FireServer bridge",
-                    "remote_bridge_enabled",
-                    Config.RemoteBridge.Enabled == true,
-                    function(Value)
-                        RemoteBridge.SetEnabled(
-                            Value
-                        )
-
-                        RemoteStatus:
-                            SetText(
-                                Value
-                                and "FireServer bridge: ON"
-                                or "FireServer bridge: OFF"
-                            )
-                    end
-                )
-
-                IntegrationsSection:
-                    AddButton({
-                        Name =
-                            "Fire Test Event",
-
-                        ToolTip =
-                            "Calls only the RemoteEvent path configured in Config.RemoteBridge.",
-
-                        Callback =
-                            function()
-                                local Ok, Message =
-                                    RemoteBridge.FireTest()
-
-                                RemoteStatus:
-                                    SetText(
-                                        Ok
-                                        and "FireServer bridge: sent"
-                                        or "FireServer bridge: " .. tostring(Message)
-                                    )
-                            end,
-                    })
-
-                IntegrationsSection:
-                    AddLabel(
-                        "Stellar remote loader: not included",
-                        true
                     )
+
+                    SensoryStatus:SetText(
+                        "sensoryESP: "
+                        .. tostring(
+                            RemoteDependencies.GetStatus(
+                                "SensoryESP"
+                            )
+                        )
+                    )
+                end
+
+                RemoteSection:AddButton({
+                    Name =
+                        "Load Stellar",
+
+                    Callback = function()
+                        RemoteDependencies.LoadStellar()
+                        RefreshRemoteStatus()
+                    end,
+                })
+
+                RemoteSection:AddButton({
+                    Name =
+                        "Load sensoryESP",
+
+                    Callback = function()
+                        RemoteDependencies.LoadSensoryESP()
+                        RefreshRemoteStatus()
+                    end,
+                })
+
+                RemoteSection:AddButton({
+                    Name =
+                        "Load Both",
+
+                    Callback = function()
+                        RemoteDependencies.LoadAll()
+                        RefreshRemoteStatus()
+                    end,
+                })
 
                 local ProjectSection =
                     SettingsTab:
@@ -2600,7 +2376,7 @@ function UI.Init(
 
                 ProjectSection:
                     AddLabel(
-                        "Runtime: ESP + Advanced ESP + Combat + Player Tools + Movement + Integrations",
+                        "Runtime: ESP + Advanced ESP + Combat + Player Tools + Movement",
                         true
                     )
 

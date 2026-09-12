@@ -67,9 +67,6 @@ local FreecamModule =
 local ESPModule =
     Bundled.ESPModule
 
-local LootESPModule =
-    Bundled.LootESPModule
-
 local AdvancedESPModule =
     Bundled.AdvancedESPModule
 
@@ -85,11 +82,8 @@ local CharacterFeaturesModule =
 local FeatureInputModule =
     Bundled.FeatureInputModule
 
-local SensoryESPModule =
-    Bundled.SensoryESPModule
-
-local RemoteBridgeModule =
-    Bundled.RemoteBridgeModule
+local RemoteDependenciesModule =
+    Bundled.RemoteDependenciesModule
 
 local UIModule =
     Bundled.UIModule
@@ -138,12 +132,6 @@ assert(
     and type(PlayerESPModule.Init)
         == "function",
     "PlayerESP.lua invalido"
-)
-
-assert(
-    type(LootESPModule) == "table"
-    and type(LootESPModule.Init) == "function",
-    "LootESP.lua invalido"
 )
 
 assert(
@@ -203,17 +191,10 @@ assert(
 )
 
 assert(
-    type(SensoryESPModule) == "table"
-    and type(SensoryESPModule.Init)
+    type(RemoteDependenciesModule) == "table"
+    and type(RemoteDependenciesModule.Init)
         == "function",
-    "SensoryESP.lua invalido"
-)
-
-assert(
-    type(RemoteBridgeModule) == "table"
-    and type(RemoteBridgeModule.Init)
-        == "function",
-    "RemoteBridge.lua invalido"
+    "RemoteDependencies.lua invalido"
 )
 
 assert(
@@ -249,8 +230,7 @@ local PlayerToolsController
 local AimAssistController
 local CharacterFeaturesController
 local FeatureInputController
-local SensoryESPController
-local RemoteBridgeController
+local RemoteDependenciesController
 local UIController
 
 local InitSuccess,
@@ -288,9 +268,6 @@ local InitSuccess,
 
                         CorpseESPModule =
                             CorpseESPModule,
-
-                        LootESPModule = 
-                            LootESPModule,
                     }
                 )
 
@@ -373,26 +350,15 @@ local InitSuccess,
                 "FeatureInput.Init nao retornou controller"
             )
 
-            SensoryESPController =
-                SensoryESPModule.Init(
+            RemoteDependenciesController =
+                RemoteDependenciesModule.Init(
                     Config
                 )
 
             assert(
-                type(SensoryESPController)
+                type(RemoteDependenciesController)
                     == "table",
-                "SensoryESP.Init nao retornou controller"
-            )
-
-            RemoteBridgeController =
-                RemoteBridgeModule.Init(
-                    Config
-                )
-
-            assert(
-                type(RemoteBridgeController)
-                    == "table",
-                "RemoteBridge.Init nao retornou controller"
+                "RemoteDependencies.Init nao retornou controller"
             )
 
             UIController =
@@ -417,11 +383,8 @@ local InitSuccess,
                         AdvancedESP =
                             AdvancedESPController,
 
-                        SensoryESP =
-                            SensoryESPController,
-
-                        RemoteBridge =
-                            RemoteBridgeController,
+                        RemoteDependencies =
+                            RemoteDependenciesController,
                     }
                 )
 
@@ -438,11 +401,7 @@ if not InitSuccess then
     )
 
     CleanupController(
-        RemoteBridgeController
-    )
-
-    CleanupController(
-        SensoryESPController
+        RemoteDependenciesController
     )
 
     CleanupController(
@@ -512,11 +471,8 @@ local Project = {
     FeatureInput =
         FeatureInputController,
 
-    SensoryESP =
-        SensoryESPController,
-
-    RemoteBridge =
-        RemoteBridgeController,
+    RemoteDependencies =
+        RemoteDependenciesController,
 
     UI =
         UIController,
@@ -541,11 +497,7 @@ function Project.Destroy()
     )
 
     CleanupController(
-        RemoteBridgeController
-    )
-
-    CleanupController(
-        SensoryESPController
+        RemoteDependenciesController
     )
 
     CleanupController(
@@ -583,10 +535,7 @@ function Project.Destroy()
     UIController =
         nil
 
-    RemoteBridgeController =
-        nil
-
-    SensoryESPController =
+    RemoteDependenciesController =
         nil
 
     FeatureInputController =
@@ -614,12 +563,6 @@ function Project.Destroy()
         nil
 
     Project.UI =
-        nil
-
-    Project.RemoteBridge =
-        nil
-
-    Project.SensoryESP =
         nil
 
     Project.FeatureInput =

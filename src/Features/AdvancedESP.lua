@@ -39,20 +39,14 @@ function AdvancedESP.Init(Config)
     local UpdateInterval =
         1 / UpdateFrequency
 
-    local CoreGui =
-        (gethui and gethui())
-        or game:GetService("CoreGui")
-
-    local GuiName =
-        "NEWZ_AdvancedESP_"
-        .. tostring(
-            math.random(100000, 999999)
-        )
+    local ParentGui =
+        LocalPlayer:WaitForChild("PlayerGui")
 
     local OldGui =
-        CoreGui:FindFirstChild(
-            "NEWZ_AdvancedESP"
-        )
+        ParentGui:
+            FindFirstChild(
+                "NEWZ_AdvancedESP"
+            )
 
     if OldGui then
         OldGui:Destroy()
@@ -64,7 +58,7 @@ function AdvancedESP.Init(Config)
         )
 
     ScreenGui.Name =
-        GuiName
+        "NEWZ_AdvancedESP"
 
     ScreenGui.ResetOnSpawn =
         false
@@ -79,7 +73,7 @@ function AdvancedESP.Init(Config)
         Enum.ZIndexBehavior.Sibling
 
     ScreenGui.Parent =
-        CoreGui
+        ParentGui
 
     local Destroyed = false
     local Accumulator = 0
@@ -366,9 +360,6 @@ function AdvancedESP.Init(Config)
 
             SkeletonLines =
                 {},
-
-            Visible =
-                true,
         }
     end
 
@@ -506,15 +497,13 @@ function AdvancedESP.Init(Config)
             == LocalPlayer.Team
     end
 
-    -- Verifica visibilidade de múltiplos pontos. Se QUALQUER parte
-    -- estiver desobstruída, considera visível.
     local function IsVisible(
         Character,
-        Head,
+        TargetPart,
         Camera
     )
         if
-            not Character
+            not TargetPart
             or not Camera
         then
             return false
@@ -538,88 +527,108 @@ function AdvancedESP.Init(Config)
         local Origin =
             Camera.CFrame.Position
 
-        local CheckParts = {
-            Head,
-            Character:FindFirstChild("UpperTorso"),
-            Character:FindFirstChild("HumanoidRootPart"),
-        }
+        local Direction =
+            TargetPart.Position
+            - Origin
 
-        for _, Part in ipairs(CheckParts) do
-            if
-                Part
-                and Part:IsA("BasePart")
-            then
-                local Result =
-                    Workspace:Raycast(
-                        Origin,
-                        Part.Position
-                            - Origin,
-                        VisibilityParams
+        local Result =
+            Workspace:Raycast(
+                Origin,
+                Direction,
+                VisibilityParams
+            )
+
+        return
+            not Result
+            or (
+                Result.Instance
+                and Result.Instance:
+                    IsDescendantOf(
+                        Character
                     )
-
-                if
-                    not Result
-                    or (
-                        Result.Instance
-                        and Result.Instance:
-                            IsDescendantOf(
-                                Character
-                            )
-                    )
-                then
-                    return true
-                end
-            end
-        end
-
-        return false
+            )
     end
 
-    -- Tabela de nomes de partes do corpo (mesma do Core/Bounds.lua)
-    local BodyPartNames = {
-        ["Head"] = true, ["Head2"] = true, ["Torso"] = true,
-        ["Left Arm"] = true, ["Right Arm"] = true,
-        ["Left Leg"] = true, ["Right Leg"] = true,
-        ["UpperTorso"] = true, ["LowerTorso"] = true,
-        ["LeftUpperArm"] = true, ["LeftLowerArm"] = true, ["LeftHand"] = true,
-        ["RightUpperArm"] = true, ["RightLowerArm"] = true, ["RightHand"] = true,
-        ["LeftUpperLeg"] = true, ["LeftLowerLeg"] = true, ["LeftFoot"] = true,
-        ["RightUpperLeg"] = true, ["RightLowerLeg"] = true, ["RightFoot"] = true,
-    }
+    local function GetBounds(
+        Character,
+        Camera
+    )
+        local Success,
+            Pivot,
+            Size =
+                pcall(
+                    Character.GetBoundingBox,
+                    Character
+                )
 
-    local function GetBounds(Character, Camera)
-        local MinX, MinY = math.huge, math.huge
-        local MaxX, MaxY = -math.huge, -math.huge
-        local SawPoint = false
+        if not Success then
+            return nil
+        end
 
-        -- Itera APENAS pelas partes do corpo, ignorando ferramentas/acessórios
-        for _, Part in ipairs(Character:GetDescendants()) do
-            if Part:IsA("BasePart") and BodyPartNames[Part.Name] then
-                -- Ignora se estiver dentro de uma Tool ou Accessory
-                local isTool = Part:FindFirstAncestorWhichIsA("Tool")
-                local isAccessory = Part:FindFirstAncestorWhichIsA("Accessory")
-                
-                if not isTool and not isAccessory then
-                    local Size = Part.Size
-                    local CF = Part.CFrame
-                    local HalfSize = Size * 0.5
+        local Half =
+            Size * 0.5
 
-                    -- Projeta os 8 cantos da parte para a tela
-                    for X = -1, 1, 2 do
-                        for Y = -1, 1, 2 do
-                            for Z = -1, 1, 2 do
-                                local WorldPos = (CF * CFrame.new(HalfSize.X * X, HalfSize.Y * Y, HalfSize.Z * Z)).Position
-                                local ScreenPos, OnScreen = Camera:WorldToViewportPoint(WorldPos)
-                                
-                                if OnScreen and ScreenPos.Z > 0 then
-                                    SawPoint = true
-                                    MinX = math.min(MinX, ScreenPos.X)
-                                    MinY = math.min(MinY, ScreenPos.Y)
-                                    MaxX = math.max(MaxX, ScreenPos.X)
-                                    MaxY = math.max(MaxY, ScreenPos.Y)
-                                end
-                            end
-                        end
+        local MinX =
+            math.huge
+
+        local MinY =
+            math.huge
+
+        local MaxX =
+            -math.huge
+
+        local MaxY =
+            -math.huge
+
+        local SawPoint =
+            false
+
+        for X = -1, 1, 2 do
+            for Y = -1, 1, 2 do
+                for Z = -1, 1, 2 do
+                    local World =
+                        (
+                            Pivot
+                            * CFrame.new(
+                                Half.X * X,
+                                Half.Y * Y,
+                                Half.Z * Z
+                            )
+                        ).Position
+
+                    local Point =
+                        Camera:
+                            WorldToViewportPoint(
+                                World
+                            )
+
+                    if Point.Z > 0 then
+                        SawPoint =
+                            true
+
+                        MinX =
+                            math.min(
+                                MinX,
+                                Point.X
+                            )
+
+                        MinY =
+                            math.min(
+                                MinY,
+                                Point.Y
+                            )
+
+                        MaxX =
+                            math.max(
+                                MaxX,
+                                Point.X
+                            )
+
+                        MaxY =
+                            math.max(
+                                MaxY,
+                                Point.Y
+                            )
                     end
                 end
             end
@@ -630,12 +639,33 @@ function AdvancedESP.Init(Config)
         end
 
         return {
-            X = MinX,
-            Y = MinY,
-            Width = math.max(1, MaxX - MinX),
-            Height = math.max(1, MaxY - MinY),
-            CenterX = (MinX + MaxX) * 0.5,
-            CenterY = (MinY + MaxY) * 0.5,
+            X =
+                MinX,
+
+            Y =
+                MinY,
+
+            Width =
+                math.max(
+                    1,
+                    MaxX - MinX
+                ),
+
+            Height =
+                math.max(
+                    1,
+                    MaxY - MinY
+                ),
+
+            CenterX =
+                (
+                    MinX + MaxX
+                ) * 0.5,
+
+            CenterY =
+                (
+                    MinY + MaxY
+                ) * 0.5,
         }
     end
 
@@ -726,12 +756,10 @@ function AdvancedESP.Init(Config)
         return Line
     end
 
-    -- Skeleton também respeita visibilidade agora.
     local function UpdateSkeleton(
         Data,
         Character,
-        Camera,
-        Visible
+        Camera
     )
         local Skeleton =
             Settings.Skeleton
@@ -755,20 +783,6 @@ function AdvancedESP.Init(Config)
                 1,
                 1
             )
-
-        if
-            Settings.VisibilityCheck
-            == true
-            and not Visible
-        then
-            Color =
-                Settings.HiddenColor
-                or Color3.fromRGB(
-                    255,
-                    90,
-                    90
-                )
-        end
 
         local Thickness =
             tonumber(
@@ -903,12 +917,10 @@ function AdvancedESP.Init(Config)
             )
     end
 
-    -- HealthBar agora respeita visibilidade.
     local function UpdateHealthBar(
         Data,
         Bounds,
-        Humanoid,
-        Visible
+        Humanoid
     )
         local HealthSettings =
             Settings.HealthBar
@@ -1010,29 +1022,10 @@ function AdvancedESP.Init(Config)
                 0
             )
 
-        -- Cor dinâmica com base em HP OU visibilidade
-        local BarColor
-        if
-            Settings.VisibilityCheck
-            == true
-            and not Visible
-        then
-            BarColor =
-                Settings.HiddenColor
-                or Color3.fromRGB(
-                    255,
-                    90,
-                    90
-                )
-        else
-            BarColor =
-                GetHealthColor(
-                    Humanoid
-                )
-        end
-
         Data.HealthFill.BackgroundColor3 =
-            BarColor
+            GetHealthColor(
+                Humanoid
+            )
 
         Data.HealthFill.Visible =
             true
@@ -1146,13 +1139,11 @@ function AdvancedESP.Init(Config)
             true
     end
 
-    -- Texto avançado respeita visibilidade.
     local function UpdateAdvancedText(
         Data,
         Bounds,
         Player,
-        Distance,
-        Visible
+        Distance
     )
         local TextSettings =
             Settings.AdvancedText
@@ -1213,20 +1204,6 @@ function AdvancedESP.Init(Config)
                 1,
                 1
             )
-
-        if
-            Settings.VisibilityCheck
-            == true
-            and not Visible
-        then
-            TextColor =
-                Settings.HiddenColor
-                or Color3.fromRGB(
-                    255,
-                    90,
-                    90
-                )
-        end
 
         Data.NameText.TextColor3 =
             TextColor
@@ -1328,11 +1305,9 @@ function AdvancedESP.Init(Config)
         end
     end
 
-    -- Outline respeita visibilidade.
     local function UpdateOutline(
         Data,
-        Bounds,
-        Visible
+        Bounds
     )
         if
             Settings.Outlines
@@ -1356,35 +1331,13 @@ function AdvancedESP.Init(Config)
                 Bounds.Height
             )
 
-        local UseVisibility =
-            Settings.VisibilityCheck
-            == true
-
-        local Color
-
-        if
-            UseVisibility
-            and not Visible
-        then
-            Color =
-                Settings.HiddenColor
-                or Color3.fromRGB(
-                    255,
-                    90,
-                    90
-                )
-        else
-            Color =
-                Settings.OutlineColor
-                or Color3.new(
-                    0,
-                    0,
-                    0
-                )
-        end
-
         Data.OutlineStroke.Color =
-            Color
+            Settings.OutlineColor
+            or Color3.new(
+                0,
+                0,
+                0
+            )
 
         Data.OutlineStroke.Thickness =
             math.max(
@@ -1800,17 +1753,12 @@ function AdvancedESP.Init(Config)
                 )
         end
 
-        Data.Visible =
-            Visible
-
-        -- Chams usa Visible
         UpdateChams(
             Data,
             Character,
             Visible
         )
 
-        -- Fora da tela: esconde 2D e mostra seta
         if
             not RootOnScreen
             or RootScreen.Z
@@ -1867,18 +1815,15 @@ function AdvancedESP.Init(Config)
             return
         end
 
-        -- Passa Visible para tudo
         UpdateOutline(
             Data,
-            Bounds,
-            Visible
+            Bounds
         )
 
         UpdateHealthBar(
             Data,
             Bounds,
-            Humanoid,
-            Visible
+            Humanoid
         )
 
         UpdateFlags(
@@ -1891,15 +1836,13 @@ function AdvancedESP.Init(Config)
             Data,
             Bounds,
             Player,
-            Distance,
-            Visible
+            Distance
         )
 
         UpdateSkeleton(
             Data,
             Character,
-            Camera,
-            Visible
+            Camera
         )
     end
 

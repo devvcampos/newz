@@ -22,8 +22,7 @@ SOURCE_ORDER = (
     "AimAssist",
     "CharacterFeatures",
     "FeatureInput",
-    "SensoryESP",
-    "RemoteBridge",
+    "RemoteDependencies",
     "UI",
     "NeverLose",
 )
@@ -44,8 +43,7 @@ SOURCES = {
     "AimAssist": ROOT / "src" / "Features" / "AimAssist.lua",
     "CharacterFeatures": ROOT / "src" / "Features" / "CharacterFeatures.lua",
     "FeatureInput": ROOT / "src" / "Features" / "FeatureInput.lua",
-    "SensoryESP": ROOT / "src" / "Integrations" / "SensoryESP.lua",
-    "RemoteBridge": ROOT / "src" / "Integrations" / "RemoteBridge.lua",
+    "RemoteDependencies": ROOT / "src" / "Features" / "RemoteDependencies.lua",
     "UI": ROOT / "src" / "Ui.lua",
     "NeverLose": ROOT / "vendor" / "NeverLose.lua",
 }
@@ -321,11 +319,8 @@ local CharacterFeaturesModule =
 local FeatureInputModule =
     Execute("FeatureInput")
 
-local SensoryESPModule =
-    Execute("SensoryESP")
-
-local RemoteBridgeModule =
-    Execute("RemoteBridge")
+local RemoteDependenciesModule =
+    Execute("RemoteDependencies")
 
 local UIModule =
     Execute("UI")
@@ -351,8 +346,7 @@ Environment.NEWZ_BUNDLE = {{
     AimAssistModule = AimAssistModule,
     CharacterFeaturesModule = CharacterFeaturesModule,
     FeatureInputModule = FeatureInputModule,
-    SensoryESPModule = SensoryESPModule,
-    RemoteBridgeModule = RemoteBridgeModule,
+    RemoteDependenciesModule = RemoteDependenciesModule,
 
     UIModule = UIModule,
     NeverLose = NeverLose,

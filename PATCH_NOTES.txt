@@ -1,34 +1,8 @@
 Newz 0.6.1
 
-Added:
-- src/Integrations/SensoryESP.lua
-- src/Integrations/RemoteBridge.lua
-
-Updated:
-- src/Config.lua
-- src/Main.lua
-- src/Ui.lua
-- src/Modules/Freecam.lua
-- scripts/build.py
-- scripts/check.py
-- README.md
-- THIRD_PARTY_NOTICES.md
-
-Integration decisions:
-- Stellar remote loader: NOT included.
-- sensoryESP remote loader: included, disabled by default, manual/optional.
-- FireServer path: included only as an explicit Config.RemoteBridge RemoteEvent path owned by the project; disabled by default.
-- Friend-style/recovered Freecam: Scriptable camera, RenderStepped, GetMouseDelta, keyboard movement; no character teleport/reposition on exit.
-
-Preserved:
-- NeverLose UI
-- PlayerESP
-- CorpseESP
-- AdvancedESP
-- PlayerTools
-- AimAssist
-- Zoom / Noclip / Invisible local
-- profiler/core modular architecture
-
-Safety/accuracy note:
-The unidentified RemoteEvent from the analyzed project was not guessed or replayed. Configure Config.RemoteBridge.Path to a RemoteEvent in your own game before enabling the bridge.
+- Fixes broken/incomplete LootESP bundle integration.
+- No LootESP module is required by Main or build.
+- Adds optional Friend Dependencies loader for Stellar and sensoryESP.
+- Remote dependencies are never auto-loaded. Use Settings > Friend Dependencies.
+- Keeps NeverLose as the active Newz UI.
+- Unknown FireServer path remains intentionally excluded until its purpose is proven.

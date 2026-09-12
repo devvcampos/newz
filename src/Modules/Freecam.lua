@@ -1,35 +1,54 @@
 local Freecam = {}
 
 function Freecam.Init(Config)
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-    local Workspace = game:GetService("Workspace")
+    local Players =
+        game:GetService("Players")
 
-    local LocalPlayer = Players.LocalPlayer
+    local RunService =
+        game:GetService("RunService")
+
+    local UserInputService =
+        game:GetService("UserInputService")
+
+    local ContextActionService =
+        game:GetService("ContextActionService")
+
+    local Workspace =
+        game:GetService("Workspace")
+
+    local LocalPlayer =
+        Players.LocalPlayer
 
     assert(
         LocalPlayer,
         "Freecam precisa ser inicializada no cliente"
     )
 
-    Config.Freecam = Config.Freecam or {}
-    local Settings = Config.Freecam
+    Config.Freecam =
+        Config.Freecam
+        or {}
+
+    local Settings =
+        Config.Freecam
 
     local Destroyed = false
     local Enabled = false
 
     local SavedCameraState = nil
     local RenderConnection = nil
-    local InputBeganConnection = nil
-    local InputEndedConnection = nil
-    local ToggleConnection = nil
     local StateChangedCallback = nil
 
-    local CameraPosition = Vector3.zero
+    local CameraPosition =
+        Vector3.zero
+
     local CameraPitch = 0
     local CameraYaw = 0
+
     local KeyState = {}
+
+    local MovementActionName =
+        "NEWZ_FreecamMovement_"
+        .. tostring(LocalPlayer.UserId)
 
     local Controller = {}
 
@@ -41,91 +60,357 @@ function Freecam.Init(Config)
             return Value
         end
 
-        local Name = tostring(Value or "V")
-        Name = string.gsub(Name, "^Enum%.KeyCode%.", "")
+        local Name =
+            tostring(
+                Value
+                or "V"
+            )
 
-        return Enum.KeyCode[Name] or Enum.KeyCode.V
+        Name =
+            string.gsub(
+                Name,
+                "^Enum%.KeyCode%.",
+                ""
+            )
+
+        return
+            Enum.KeyCode[Name]
+            or Enum.KeyCode.V
     end
 
-    local ToggleKey = ResolveKeyCode(Settings.Keybind)
+    local ToggleKey =
+        ResolveKeyCode(
+            Settings.Keybind
+        )
 
     local function NotifyStateChanged()
-        Settings.Enabled = Enabled
+        Settings.Enabled =
+            Enabled
 
-        if type(StateChangedCallback) == "function" then
-            pcall(StateChangedCallback, Enabled)
+        if
+            type(StateChangedCallback)
+            == "function"
+        then
+            pcall(
+                StateChangedCallback,
+                Enabled
+            )
         end
     end
 
-    local function IsDown(KeyCode)
-        return KeyState[KeyCode] == true
-    end
+    local function GetCharacter()
+        local Character =
+            LocalPlayer.Character
 
-    local function ClearInput()
-        table.clear(KeyState)
-    end
+        local Root =
+            Character
+            and Character:
+                FindFirstChild(
+                    "HumanoidRootPart"
+                )
 
-    local function DisconnectFreecamInput()
-        if InputBeganConnection then
-            InputBeganConnection:Disconnect()
-            InputBeganConnection = nil
+        if
+            not Character
+            or not Root
+            or not Root:IsA("BasePart")
+        then
+            return nil, nil
         end
 
-        if InputEndedConnection then
-            InputEndedConnection:Disconnect()
-            InputEndedConnection = nil
-        end
-
-        ClearInput()
+        return Character, Root
     end
 
-    local function BindFreecamInput()
-        DisconnectFreecamInput()
-
-        InputBeganConnection =
-            UserInputService.InputBegan:Connect(function(Input, GameProcessed)
-                if Destroyed or not Enabled or GameProcessed then
-                    return
-                end
-
-                if Input.UserInputType == Enum.UserInputType.Keyboard then
-                    KeyState[Input.KeyCode] = true
-                end
-            end)
-
-        InputEndedConnection =
-            UserInputService.InputEnded:Connect(function(Input)
-                if Input.UserInputType == Enum.UserInputType.Keyboard then
-                    KeyState[Input.KeyCode] = nil
-                end
-            end)
-    end
-
-    local function UpdateCamera(DeltaTime)
-        if Destroyed or not Enabled then
+    local function StopCharacterMotion(Character)
+        if not Character then
             return
         end
 
-        local Camera = Workspace.CurrentCamera
+        for _, Object
+            in ipairs(
+                Character:GetDescendants()
+            )
+        do
+            if Object:IsA("BasePart") then
+                Object.AssemblyLinearVelocity =
+                    Vector3.zero
+
+                Object.AssemblyAngularVelocity =
+                    Vector3.zero
+            end
+        end
+    end
+
+    local function GetExitCFrame(CameraCFrame)
+        local Position =
+            CameraCFrame.Position
+
+        if Settings.SnapToGround ~= false then
+            local Character =
+                LocalPlayer.Character
+
+            local Params =
+                RaycastParams.new()
+
+            Params.FilterType =
+                Enum.RaycastFilterType.Exclude
+
+            if Character then
+                Params.FilterDescendantsInstances = {
+                    Character,
+                }
+            else
+                Params.FilterDescendantsInstances = {}
+            end
+
+            local ProbeDistance =
+                math.clamp(
+                    tonumber(
+                        Settings.GroundProbeDistance
+                    )
+                    or 200,
+                    10,
+                    1000
+                )
+
+            local Result =
+                Workspace:Raycast(
+                    Position
+                    + Vector3.new(
+                        0,
+                        4,
+                        0
+                    ),
+                    Vector3.new(
+                        0,
+                        -ProbeDistance,
+                        0
+                    ),
+                    Params
+                )
+
+            if Result then
+                local Offset =
+                    math.clamp(
+                        tonumber(
+                            Settings.GroundOffset
+                        )
+                        or 3,
+                        1,
+                        8
+                    )
+
+                Position =
+                    Result.Position
+                    + Vector3.new(
+                        0,
+                        Offset,
+                        0
+                    )
+            end
+        end
+
+        local Look =
+            CameraCFrame.LookVector
+
+        local FlatLook =
+            Vector3.new(
+                Look.X,
+                0,
+                Look.Z
+            )
+
+        if FlatLook.Magnitude < 0.001 then
+            local _,
+                Root =
+                    GetCharacter()
+
+            if Root then
+                local RootLook =
+                    Root.CFrame.LookVector
+
+                FlatLook =
+                    Vector3.new(
+                        RootLook.X,
+                        0,
+                        RootLook.Z
+                    )
+            end
+        end
+
+        if FlatLook.Magnitude < 0.001 then
+            FlatLook =
+                Vector3.new(
+                    0,
+                    0,
+                    -1
+                )
+        else
+            FlatLook =
+                FlatLook.Unit
+        end
+
+        return CFrame.lookAt(
+            Position,
+            Position + FlatLook
+        )
+    end
+
+    local function MoveCharacterToCamera(
+        CameraCFrame
+    )
+        local Character =
+            GetCharacter()
+
+        if not Character then
+            return false,
+                "Personagem nao esta pronto"
+        end
+
+        local Destination =
+            GetExitCFrame(
+                CameraCFrame
+            )
+
+        StopCharacterMotion(
+            Character
+        )
+
+        Character:PivotTo(
+            Destination
+        )
+
+        StopCharacterMotion(
+            Character
+        )
+
+        return true,
+            "Movido para o fim da freecam"
+    end
+
+    local function MovementAction(
+        _,
+        InputState,
+        InputObject
+    )
+        if not Enabled then
+            return
+                Enum.ContextActionResult.Pass
+        end
+
+        local KeyCode =
+            InputObject.KeyCode
+
+        if
+            InputState
+            == Enum.UserInputState.Begin
+            or InputState
+            == Enum.UserInputState.Change
+        then
+            KeyState[KeyCode] =
+                true
+
+        elseif
+            InputState
+            == Enum.UserInputState.End
+            or InputState
+            == Enum.UserInputState.Cancel
+        then
+            KeyState[KeyCode] =
+                nil
+        end
+
+        return
+            Enum.ContextActionResult.Sink
+    end
+
+    local function BindMovement()
+        table.clear(
+            KeyState
+        )
+
+        ContextActionService:
+            BindActionAtPriority(
+                MovementActionName,
+                MovementAction,
+                false,
+                Enum.ContextActionPriority.High.Value
+                    + 100,
+                Enum.KeyCode.W,
+                Enum.KeyCode.A,
+                Enum.KeyCode.S,
+                Enum.KeyCode.D,
+                Enum.KeyCode.Space,
+                Enum.KeyCode.LeftControl,
+                Enum.KeyCode.RightControl,
+                Enum.KeyCode.LeftShift,
+                Enum.KeyCode.RightShift
+            )
+    end
+
+    local function UnbindMovement()
+        ContextActionService:
+            UnbindAction(
+                MovementActionName
+            )
+
+        table.clear(
+            KeyState
+        )
+    end
+
+    local function IsDown(KeyCode)
+        return
+            KeyState[KeyCode]
+            == true
+    end
+
+    local function UpdateCamera(DeltaTime)
+        if
+            not Enabled
+            or Destroyed
+        then
+            return
+        end
+
+        local Camera =
+            Workspace.CurrentCamera
+
         if not Camera then
             return
         end
 
-        local MouseDelta = UserInputService:GetMouseDelta()
+        local MouseDelta =
+            UserInputService:
+                GetMouseDelta()
+
         local Sensitivity =
             math.clamp(
-                tonumber(Settings.MouseSensitivity) or 0.12,
+                tonumber(
+                    Settings.MouseSensitivity
+                )
+                or 0.12,
                 0.01,
                 1
             )
 
-        CameraYaw -= math.rad(MouseDelta.X * Sensitivity)
-        CameraPitch -= math.rad(MouseDelta.Y * Sensitivity)
-        CameraPitch = math.clamp(
-            CameraPitch,
-            math.rad(-89),
-            math.rad(89)
-        )
+        local RadiansPerPixel =
+            math.rad(
+                Sensitivity
+            )
+
+        CameraYaw =
+            CameraYaw
+            - MouseDelta.X
+                * RadiansPerPixel
+
+        CameraPitch =
+            math.clamp(
+                CameraPitch
+                - MouseDelta.Y
+                    * RadiansPerPixel,
+                math.rad(-89),
+                math.rad(89)
+            )
 
         local Rotation =
             CFrame.fromOrientation(
@@ -134,162 +419,308 @@ function Freecam.Init(Config)
                 0
             )
 
-        local Direction = Vector3.zero
+        local X =
+            (
+                IsDown(Enum.KeyCode.D)
+                and 1
+                or 0
+            )
+            - (
+                IsDown(Enum.KeyCode.A)
+                and 1
+                or 0
+            )
 
-        if IsDown(Enum.KeyCode.W) then
-            Direction += Vector3.new(0, 0, -1)
-        end
+        local Y =
+            (
+                IsDown(Enum.KeyCode.Space)
+                and 1
+                or 0
+            )
+            - (
+                (
+                    IsDown(
+                        Enum.KeyCode.LeftControl
+                    )
+                    or IsDown(
+                        Enum.KeyCode.RightControl
+                    )
+                )
+                and 1
+                or 0
+            )
 
-        if IsDown(Enum.KeyCode.S) then
-            Direction += Vector3.new(0, 0, 1)
-        end
+        local Z =
+            (
+                IsDown(Enum.KeyCode.W)
+                and 1
+                or 0
+            )
+            - (
+                IsDown(Enum.KeyCode.S)
+                and 1
+                or 0
+            )
 
-        if IsDown(Enum.KeyCode.A) then
-            Direction += Vector3.new(-1, 0, 0)
-        end
+        local Move =
+            Rotation.RightVector * X
+            + Vector3.new(
+                0,
+                1,
+                0
+            ) * Y
+            + Rotation.LookVector * Z
 
-        if IsDown(Enum.KeyCode.D) then
-            Direction += Vector3.new(1, 0, 0)
-        end
-
-        if IsDown(Enum.KeyCode.Space) then
-            Direction += Vector3.new(0, 1, 0)
-        end
-
-        if
-            IsDown(Enum.KeyCode.LeftControl)
-            or IsDown(Enum.KeyCode.RightControl)
-        then
-            Direction += Vector3.new(0, -1, 0)
+        if Move.Magnitude > 1 then
+            Move =
+                Move.Unit
         end
 
         local Speed =
             math.clamp(
-                tonumber(Settings.Speed) or 55,
+                tonumber(
+                    Settings.Speed
+                )
+                or 55,
                 1,
                 500
             )
 
         if
-            IsDown(Enum.KeyCode.LeftShift)
-            or IsDown(Enum.KeyCode.RightShift)
+            IsDown(
+                Enum.KeyCode.LeftShift
+            )
+            or IsDown(
+                Enum.KeyCode.RightShift
+            )
         then
-            Speed *=
-                math.clamp(
-                    tonumber(Settings.BoostMultiplier) or 3,
+            Speed =
+                Speed
+                * math.clamp(
+                    tonumber(
+                        Settings.BoostMultiplier
+                    )
+                    or 3,
                     1,
                     10
                 )
         end
 
-        if Direction.Magnitude > 0 then
-            Direction = Direction.Unit
-
-            local WorldDirection =
-                Rotation:VectorToWorldSpace(Direction)
-
-            CameraPosition +=
-                WorldDirection
+        CameraPosition =
+            CameraPosition
+            + Move
                 * Speed
-                * DeltaTime
-        end
+                * math.min(
+                    DeltaTime,
+                    0.1
+                )
+
+        local CameraCFrame =
+            CFrame.new(
+                CameraPosition
+            )
+            * Rotation
+
+        Camera.CameraType =
+            Enum.CameraType.Scriptable
 
         Camera.CFrame =
-            CFrame.new(CameraPosition)
-            * Rotation
+            CameraCFrame
+
+        Camera.Focus =
+            CFrame.new(
+                CameraPosition
+                + Rotation.LookVector
+                    * 512
+            )
     end
 
-    local function DisableInternal()
+    local function DisableInternal(
+        TeleportCharacter
+    )
         if not Enabled then
-            return true, "Freecam ja esta desativada"
+            return true,
+                "Freecam ja esta desativada"
         end
+
+        local Camera =
+            Workspace.CurrentCamera
+
+        local FinalCameraCFrame =
+            Camera
+            and Camera.CFrame
+            or (
+                SavedCameraState
+                and SavedCameraState.CFrame
+            )
 
         Enabled = false
 
         if RenderConnection then
-            RenderConnection:Disconnect()
-            RenderConnection = nil
+            RenderConnection:
+                Disconnect()
+
+            RenderConnection =
+                nil
         end
 
-        DisconnectFreecamInput()
+        UnbindMovement()
 
-        local Camera = Workspace.CurrentCamera
+        local TeleportSuccess = true
+        local TeleportMessage =
+            "Freecam desativada"
+
+        if
+            TeleportCharacter
+            and Settings.TeleportOnExit
+                ~= false
+            and FinalCameraCFrame
+        then
+            TeleportSuccess,
+                TeleportMessage =
+                    MoveCharacterToCamera(
+                        FinalCameraCFrame
+                    )
+        end
 
         if Camera and SavedCameraState then
-            Camera.CameraType = SavedCameraState.CameraType
-            Camera.CameraSubject = SavedCameraState.CameraSubject
-            Camera.CFrame = SavedCameraState.CFrame
-            Camera.Focus = SavedCameraState.Focus
-            Camera.FieldOfView = SavedCameraState.FieldOfView
+            Camera.FieldOfView =
+                SavedCameraState.FieldOfView
+
+            Camera.CameraSubject =
+                SavedCameraState.CameraSubject
+
+            Camera.CameraType =
+                SavedCameraState.CameraType
+
+            if
+                TeleportCharacter
+                and Settings.TeleportOnExit
+                    ~= false
+                and FinalCameraCFrame
+            then
+                Camera.CFrame =
+                    FinalCameraCFrame
+            else
+                Camera.CFrame =
+                    SavedCameraState.CFrame
+
+                Camera.Focus =
+                    SavedCameraState.Focus
+            end
         end
 
         if SavedCameraState then
-            UserInputService.MouseBehavior = SavedCameraState.MouseBehavior
-            UserInputService.MouseIconEnabled = SavedCameraState.MouseIconEnabled
-        else
-            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+            UserInputService.MouseBehavior =
+                SavedCameraState.MouseBehavior
+
+            UserInputService.MouseIconEnabled =
+                SavedCameraState.MouseIconEnabled
         end
 
         SavedCameraState = nil
+
         NotifyStateChanged()
 
-        return true, "Freecam desativada"
+        if not TeleportSuccess then
+            return false,
+                TeleportMessage
+        end
+
+        return true,
+            TeleportMessage
     end
 
     function Controller.Enable()
         if Destroyed then
-            return false, "Freecam foi destruida"
+            return false,
+                "Freecam foi destruida"
         end
 
         if Enabled then
-            return true, "Freecam ja esta ativa"
+            return true,
+                "Freecam ja esta ativa"
         end
 
-        local Camera = Workspace.CurrentCamera
+        local Camera =
+            Workspace.CurrentCamera
 
         if not Camera then
-            return false, "Camera indisponivel"
+            return false,
+                "Camera indisponivel"
         end
 
         SavedCameraState = {
-            CameraType = Camera.CameraType,
-            CameraSubject = Camera.CameraSubject,
-            CFrame = Camera.CFrame,
-            Focus = Camera.Focus,
-            FieldOfView = Camera.FieldOfView,
-            MouseBehavior = UserInputService.MouseBehavior,
-            MouseIconEnabled = UserInputService.MouseIconEnabled,
+            CameraType =
+                Camera.CameraType,
+
+            CameraSubject =
+                Camera.CameraSubject,
+
+            CFrame =
+                Camera.CFrame,
+
+            Focus =
+                Camera.Focus,
+
+            FieldOfView =
+                Camera.FieldOfView,
+
+            MouseBehavior =
+                UserInputService.MouseBehavior,
+
+            MouseIconEnabled =
+                UserInputService.MouseIconEnabled,
         }
 
-        CameraPosition = Camera.CFrame.Position
+        CameraPosition =
+            Camera.CFrame.Position
 
-        local Pitch, Yaw = Camera.CFrame:ToOrientation()
-        CameraPitch = Pitch
-        CameraYaw = Yaw
+        local Pitch,
+            Yaw =
+                Camera.CFrame:
+                    ToOrientation()
+
+        CameraPitch =
+            Pitch
+
+        CameraYaw =
+            Yaw
 
         Enabled = true
-        Camera.CameraType = Enum.CameraType.Scriptable
-        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-        UserInputService.MouseIconEnabled = false
 
-        BindFreecamInput()
+        Camera.CameraType =
+            Enum.CameraType.Scriptable
+
+        UserInputService.MouseBehavior =
+            Enum.MouseBehavior.LockCenter
+
+        UserInputService.MouseIconEnabled =
+            false
+
+        BindMovement()
 
         RenderConnection =
-            RunService.RenderStepped:Connect(
-                UpdateCamera
-            )
+            RunService.RenderStepped:
+                Connect(
+                    UpdateCamera
+                )
 
         NotifyStateChanged()
 
-        return true, "Freecam ativada"
+        return true,
+            "Freecam ativada"
     end
 
     function Controller.Disable()
         if Destroyed then
-            return false, "Freecam foi destruida"
+            return false,
+                "Freecam foi destruida"
         end
 
-        return DisableInternal()
+        return DisableInternal(
+            true
+        )
     end
 
     function Controller.Toggle()
@@ -305,8 +736,14 @@ function Freecam.Init(Config)
     end
 
     function Controller.SetKeybind(Value)
-        ToggleKey = ResolveKeyCode(Value)
-        Settings.Keybind = ToggleKey.Name
+        ToggleKey =
+            ResolveKeyCode(
+                Value
+            )
+
+        Settings.Keybind =
+            ToggleKey.Name
+
         return ToggleKey.Name
     end
 
@@ -317,7 +754,9 @@ function Freecam.Init(Config)
     function Controller.SetSpeed(Value)
         Settings.Speed =
             math.clamp(
-                tonumber(Value) or Settings.Speed or 55,
+                tonumber(Value)
+                or Settings.Speed
+                or 55,
                 1,
                 500
             )
@@ -328,7 +767,9 @@ function Freecam.Init(Config)
     function Controller.SetBoostMultiplier(Value)
         Settings.BoostMultiplier =
             math.clamp(
-                tonumber(Value) or Settings.BoostMultiplier or 3,
+                tonumber(Value)
+                or Settings.BoostMultiplier
+                or 3,
                 1,
                 10
             )
@@ -339,7 +780,9 @@ function Freecam.Init(Config)
     function Controller.SetMouseSensitivity(Value)
         Settings.MouseSensitivity =
             math.clamp(
-                tonumber(Value) or Settings.MouseSensitivity or 0.12,
+                tonumber(Value)
+                or Settings.MouseSensitivity
+                or 0.12,
                 0.01,
                 1
             )
@@ -347,56 +790,102 @@ function Freecam.Init(Config)
         return Settings.MouseSensitivity
     end
 
+    function Controller.SetTeleportOnExit(Value)
+        Settings.TeleportOnExit =
+            Value == true
+    end
+
+    function Controller.SetSnapToGround(Value)
+        Settings.SnapToGround =
+            Value == true
+    end
+
     function Controller.SetStateChangedCallback(Callback)
-        if Callback ~= nil and type(Callback) ~= "function" then
+        if
+            Callback ~= nil
+            and type(Callback)
+                ~= "function"
+        then
             return false
         end
 
-        StateChangedCallback = Callback
+        StateChangedCallback =
+            Callback
 
         if StateChangedCallback then
-            pcall(StateChangedCallback, Enabled)
+            pcall(
+                StateChangedCallback,
+                Enabled
+            )
         end
 
         return true
     end
 
-    ToggleConnection =
-        UserInputService.InputBegan:Connect(function(Input, GameProcessed)
-            if Destroyed or GameProcessed then
-                return
-            end
+    local ToggleConnection =
+        UserInputService.InputBegan:
+            Connect(function(
+                Input,
+                GameProcessed
+            )
+                if
+                    Destroyed
+                    or GameProcessed
+                then
+                    return
+                end
 
-            if UserInputService:GetFocusedTextBox() then
-                return
-            end
+                if
+                    UserInputService:
+                        GetFocusedTextBox()
+                then
+                    return
+                end
 
-            if
-                Input.UserInputType == Enum.UserInputType.Keyboard
-                and Input.KeyCode == ToggleKey
-            then
-                Controller.Toggle()
-            end
-        end)
+                if
+                    Input.UserInputType
+                    ~= Enum.UserInputType.Keyboard
+                then
+                    return
+                end
+
+                if
+                    Input.KeyCode
+                    == ToggleKey
+                then
+                    Controller.Toggle()
+                end
+            end)
 
     function Controller.Destroy()
         if Destroyed then
             return
         end
 
-        DisableInternal()
+        -- Unloading restores the camera without moving the character.
+        DisableInternal(
+            false
+        )
+
         Destroyed = true
 
         if ToggleConnection then
-            ToggleConnection:Disconnect()
-            ToggleConnection = nil
+            ToggleConnection:
+                Disconnect()
+
+            ToggleConnection =
+                nil
         end
 
-        StateChangedCallback = nil
+        StateChangedCallback =
+            nil
     end
 
-    Settings.Keybind = ToggleKey.Name
-    Settings.Enabled = false
+    Settings.Keybind =
+        ToggleKey.Name
+
+    Settings.Enabled =
+        false
 
     return Controller
 end

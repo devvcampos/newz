@@ -27,10 +27,7 @@ REQUIRED = [
     ROOT / "src" / "Features" / "AimAssist.lua",
     ROOT / "src" / "Features" / "CharacterFeatures.lua",
     ROOT / "src" / "Features" / "FeatureInput.lua",
-
-    ROOT / "src" / "Integrations" / "SensoryESP.lua",
-    ROOT / "src" / "Integrations" / "RemoteBridge.lua",
-    ROOT / "server" / "NewzRemotes.server.lua",
+    ROOT / "src" / "Features" / "RemoteDependencies.lua",
 
     ROOT / "vendor" / "NeverLose.lua",
     ROOT / "scripts" / "build.py",
@@ -80,6 +77,7 @@ STALE_TOKENS = {
 
     "scripts/build.py": [
         "CorpseIllusion",
+        "LootESP",
     ],
 }
 
@@ -129,17 +127,11 @@ FEATURE_EXPECTATIONS = {
         "ToggleInvisible",
     ],
 
-    "src/Integrations/SensoryESP.lua": [
-        "game:HttpGet",
-        "sensoryESP",
+    "src/Features/RemoteDependencies.lua": [
+        "LoadStellar",
+        "LoadSensoryESP",
+        "HttpGet",
         "loadstring",
-        "UpdateConfig",
-    ],
-
-    "src/Integrations/RemoteBridge.lua": [
-        "RemoteEvent",
-        "FireServer",
-        "FireTest",
     ],
 }
 
@@ -228,8 +220,7 @@ def main() -> int:
             "AimAssistModule",
             "CharacterFeaturesModule",
             "FeatureInputModule",
-            "SensoryESPModule",
-            "RemoteBridgeModule",
+            "RemoteDependenciesModule",
         ]:
             if token not in main_text:
                 print(
@@ -251,8 +242,7 @@ def main() -> int:
             '"AimAssist"',
             '"CharacterFeatures"',
             '"FeatureInput"',
-            '"SensoryESP"',
-            '"RemoteBridge"',
+            '"RemoteDependencies"',
         ]:
             if token not in build_text:
                 print(
@@ -275,9 +265,8 @@ def main() -> int:
 
         for token in [
             "Enum.CameraType.Scriptable",
-            "RenderStepped",
-            "GetMouseDelta",
-            "Enum.MouseBehavior.Default",
+            "BindActionAtPriority",
+            "TeleportOnExit",
             "SetKeybind",
         ]:
             if token not in freecam_text:
